@@ -11,7 +11,7 @@ Status: **Phases 0–6 implemented on branch `feature/java-maven`** (2026-11-15)
 - **D8 gate:** the `check` thresholds are off by default.
 - **D9 Gradle:** stays a follow-up.
 
-Still to do before the first Central release: the Maven Central namespace, the GPG key, and the release secrets (see README → Releases). Phase 7 items remain optional. The sections below are the original plan.
+Still to do before the first Central release: the Maven Central namespace, the GPG key, and the release secrets. The step-by-step checklist is in [TODO.md](../TODO.md). Phase 7 items remain optional. The sections below are the original plan.
 
 Date: 2026-11-15 · Baseline: `main` at `21cf8a8` (version `0.3.0`)
 

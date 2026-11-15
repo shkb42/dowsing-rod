@@ -11,6 +11,46 @@ These artifacts run the same native Rust scanner as the CLI, the npm package, an
 
 All versions equal the Rust version in `Cargo.toml`.
 
+## Quick start
+
+Try it on any Maven project without editing the POM:
+
+```bash
+mvn io.github.38e9b0f8:dowsing-rod-maven-plugin:scan
+```
+
+Add it to the build, so `mvn verify` reports on every run and CI can gate on it:
+
+```xml
+<plugin>
+  <groupId>io.github.38e9b0f8</groupId>
+  <artifactId>dowsing-rod-maven-plugin</artifactId>
+  <version>0.3.0</version>
+  <executions>
+    <execution>
+      <goals><goal>check</goal></goals>
+      <configuration>
+        <!-- Remove these two to report without ever failing the build. -->
+        <maxClustersFound>0</maxClustersFound>
+        <minRefactoringValue>100</minRefactoringValue>
+      </configuration>
+    </execution>
+  </executions>
+</plugin>
+```
+
+Everyday commands, once the plugin is declared:
+
+```bash
+mvn dowsing-rod:scan                                         # human report in the build log
+mvn dowsing-rod:scan -Ddowsing-rod.ai=true -Ddowsing-rod.maxTokens=4000   # compact output for AI agents
+mvn dowsing-rod:scan -Ddowsing-rod.format=json -Ddowsing-rod.outputFile=target/dowsing-rod.json
+mvn dowsing-rod:init && mvn dowsing-rod:auto                 # keep settings in dowsing-rod.toml
+mvn verify -Ddowsing-rod.skip=true                           # skip once
+```
+
+Don't use `mvn -q`: it hides the report, which is logged at INFO level. More recipes are in the main [README](../README.md#maven).
+
 ## Plugin goals
 
 | Goal | Default phase | CLI equivalent |

@@ -109,6 +109,13 @@ dowsing-rod scan . --format json
 dowsing-rod scan . --format jsonl
 ```
 
+In a Maven project, with no install needed (see [Maven](#maven) for adding it to `pom.xml` and gating builds):
+
+```bash
+mvn io.github.38e9b0f8:dowsing-rod-maven-plugin:scan
+mvn io.github.38e9b0f8:dowsing-rod-maven-plugin:scan -Ddowsing-rod.ai=true -Ddowsing-rod.maxTokens=4000
+```
+
 ## Example Human Output
 
 ```text
@@ -217,53 +224,130 @@ dowsing_rod.clear_cache(path=".") -> int
 
 ## Maven
 
-The Maven plugin runs the same native scanner. It resolves a prebuilt binary for the build machine from Maven Central (`io.github.38e9b0f8:dowsing-rod-native`, one classifier jar per platform) and checks its SHA-256 before running it. Java 8+ and Maven 3.6.3+ are enough. It works through mirrors and repository managers, and offline once resolved.
+The Maven plugin runs the same native scanner as the CLI. On first use it resolves a prebuilt binary for the build machine (`io.github.38e9b0f8:dowsing-rod-native`, one classifier jar per platform) from your usual Maven repositories, and checks its SHA-256 before running it. You need Java 8+ and Maven 3.6.3+; no Python, Node, or .NET. Mirrors, repository managers, and offline mode (`-o`) work as for any other plugin.
 
-```xml
-<plugin>
-  <groupId>io.github.38e9b0f8</groupId>
-  <artifactId>dowsing-rod-maven-plugin</artifactId>
-  <version>0.3.0</version>
-  <executions>
-    <execution>
-      <goals>
-        <goal>check</goal>
-      </goals>
-    </execution>
-  </executions>
-  <configuration>
-    <format>ai</format>
-    <maxTokens>4000</maxTokens>
-    <!-- Fail the build when anything worth refactoring is found: -->
-    <maxClustersFound>0</maxClustersFound>
-    <minRefactoringValue>100</minRefactoringValue>
-  </configuration>
-</plugin>
-```
+### 1. Try it without changing your POM
+
+From the root of any Maven project:
 
 ```bash
-mvn dowsing-rod:init                     # writes dowsing-rod.toml
-mvn dowsing-rod:auto                     # scans using only that file
-mvn dowsing-rod:scan -Ddowsing-rod.ai=true -Ddowsing-rod.maxTokens=2500
-mvn verify -Ddowsing-rod.skip=true
+mvn io.github.38e9b0f8:dowsing-rod-maven-plugin:scan
 ```
 
-The `dowsing-rod:` prefix works once the plugin is declared in the POM or in `<pluginGroups>`. Otherwise, use the full `io.github.38e9b0f8:dowsing-rod-maven-plugin:<goal>`.
+It prints the human-readable report to the build log. In a multi-module project it runs once at the root and scans every module, so it also finds code duplicated *between* modules.
+
+### 2. Add it to `pom.xml`
+
+```xml
+<build>
+  <plugins>
+    <plugin>
+      <groupId>io.github.38e9b0f8</groupId>
+      <artifactId>dowsing-rod-maven-plugin</artifactId>
+      <version>0.3.0</version>
+      <executions>
+        <execution>
+          <goals>
+            <goal>scan</goal>   <!-- runs in the verify phase -->
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+  </plugins>
+</build>
+```
+
+`mvn verify` now reports refactoring opportunities on every build. With the plugin declared, the short prefix works: `mvn dowsing-rod:scan`. To use the prefix in any project, add `<pluginGroup>io.github.38e9b0f8</pluginGroup>` to `~/.m2/settings.xml`.
+
+### 3. Common setups
+
+**Fail CI when duplication is found.** Use `check` instead of `scan`. Thresholds are off unless set:
+
+```xml
+<execution>
+  <goals><goal>check</goal></goals>
+  <configuration>
+    <maxClustersFound>0</maxClustersFound>         <!-- fail on any finding... -->
+    <minRefactoringValue>100</minRefactoringValue> <!-- ...worth at least this much -->
+    <failOnError>true</failOnError>                <!-- and on files that do not parse -->
+    <outputFile>${project.build.directory}/dowsing-rod.json</outputFile>
+  </configuration>
+</execution>
+```
+
+`check` prints a summary of the top clusters, with file and line references, before it fails. It also accepts `maxHighValueClusters` and `failOnClassifications` (for example `duplicate` or `strategy_candidate`).
+
+**Hand findings to a coding agent:**
+
+```bash
+mvn dowsing-rod:scan -Ddowsing-rod.ai=true -Ddowsing-rod.maxTokens=4000
+```
+
+**Keep a JSON report as a CI artifact:**
+
+```bash
+mvn dowsing-rod:scan -Ddowsing-rod.format=json -Ddowsing-rod.outputFile=target/dowsing-rod.json
+```
+
+**Keep settings in `dowsing-rod.toml`, shared with the CLI, npm, and other tools:**
+
+```bash
+mvn dowsing-rod:init    # writes dowsing-rod.toml at the project root
+mvn dowsing-rod:auto    # scans using only that file
+```
+
+Options in the POM or `-D` override the file. Options you leave out come from it.
+
+**Skip generated code and tests:**
+
+```xml
+<configuration>
+  <excludes>
+    <exclude>**/generated/**</exclude>
+    <exclude>src/test/**</exclude>
+  </excludes>
+</configuration>
+```
+
+`target/`, `build/`, `.gradle/`, and `.gitignore`d files are already skipped.
+
+**Skip it for one build:** `mvn verify -Ddowsing-rod.skip=true`.
+
+### 4. Reference
 
 | Goal | Does |
 |------|------|
 | `scan` | `dowsing-rod scan`, with POM options overriding `dowsing-rod.toml` |
+| `check` | Scans and fails the build on `maxClustersFound`, `maxHighValueClusters`, or `failOnClassifications`. With no threshold set, it only reports. |
 | `auto` | `dowsing-rod auto`: the config file only; fails without one |
 | `init` | Writes `dowsing-rod.toml` (`-Ddowsing-rod.force=true` to overwrite) |
-| `check` | Scans and fails the build on `maxClustersFound`, `maxHighValueClusters`, or `failOnClassifications`. With no threshold set, it only reports. |
 | `cache-clear` | Deletes `.dowsing-rod-cache/` |
-| `help` | Lists goals and parameters (`-Ddetail=true`) |
+| `help` | Lists goals and parameters (`mvn dowsing-rod:help -Ddetail=true`) |
 
-In a multi-module build, the goal runs **once at the reactor root** and scans the whole tree, so it also finds duplication *across* modules. If only a child module declares the plugin, it runs in that module. `perModule=true` runs it in every module for that module's folder.
+Scan options mirror the CLI flags: `minSimilarity`, `normalization`, `format`, `ai`, `maxClusters`, `maxTokens`, `jobs`, `excludes`, `includes`, `useCache`, `failOnError`. Each has a `-Ddowsing-rod.<name>` property. Plugin options are:
 
-POM options are named like the CLI flags: `minSimilarity`, `normalization`, `format`, `ai`, `maxClusters`, `maxTokens`, `jobs`, `excludes`, `includes`, `useCache`, `failOnError`. Each has a `-Ddowsing-rod.<name>` property. Plugin-only options are `outputFile`, `skip`, `perModule`, `path`, and `binaryPath`, which runs your own build of the CLI. None of the scan options has a default, so an option you leave unset comes from `dowsing-rod.toml`. One you set always wins, even when it equals the built-in default, as with CLI flags.
+- `outputFile`: also write the report to a file.
+- `skip`
+- `perModule`: run in every module for its own folder, instead of once at the root.
+- `path`: what to scan.
+- `binaryPath`: run your own build of the CLI, for platforms without a prebuilt binary.
 
-To call the scanner from Java code, use the `dowsing-rod-java` library: `DowsingRod.locate().scan(path, new ScanOptions())` returns a typed `ScanResult`. See [maven/README.md](maven/README.md).
+None of the scan options has a default, so an unset option comes from `dowsing-rod.toml`. A set option always wins, even when it equals the built-in default. If only a child module declares the plugin, it runs in that module.
+
+To call the scanner from Java code, use the `dowsing-rod-java` library: `DowsingRod.locate().scan(path, new ScanOptions())` returns a typed `ScanResult`. Full parameter tables are in [maven/README.md](maven/README.md).
+
+### Using it before it is on Maven Central
+
+To try a local build, install it into your local repository. You need Rust, Node 22+, and a JDK:
+
+```bash
+cargo build -p dowsing-cli --release
+node scripts/package-maven.mjs host target/release/dowsing-rod   # .exe on Windows
+node scripts/version.mjs --maven-config
+cd maven && ./mvnw install                                         # mvnw.cmd on Windows
+```
+
+Any project on this machine can then use the plugin at the version in `Cargo.toml`, exactly as above. The local build contains only the binary for this machine's platform.
 
 ## Configuration
 
