@@ -45,7 +45,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          test "$(find dist/tarballs -name '*.tgz' | wc -l)" -eq 6
+          test "$(find dist/tarballs -name '*.tgz' | wc -l)" -eq 8
           for package in dist/tarballs/dowsing-rod-native-*.tgz; do
             npm publish "$package" --access public --provenance
           done

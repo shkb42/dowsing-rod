@@ -16,6 +16,20 @@ inputs:
   dotnet:
     description: Install the .NET SDK used to pack the NuGet tool.
     default: "false"
+  java:
+    description: >-
+      Install a JDK for the Maven build. "true" installs the default below; a version
+      number such as "8" installs that one (the library and plugin support Java 8+).
+      Maven itself is pinned by maven/.mvn/wrapper/maven-wrapper.properties.
+    default: "false"
+  maven-central:
+    description: >-
+      Configure Maven for publishing to Maven Central: server id "central" reading
+      MAVEN_CENTRAL_USERNAME / MAVEN_CENTRAL_PASSWORD, and the signing key below.
+    default: "false"
+  gpg-private-key:
+    description: ASCII-armored GPG key that signs Maven Central artifacts (with maven-central).
+    default: ""
 
 runs:
   using: composite
@@ -38,3 +52,21 @@ runs:
       with:
         # Keep the major version in step with <TargetFramework> in nuget/dowsing-rod/DowsingRod.csproj.
         dotnet-version: "8.0.x"
+    - if: inputs.java != 'false' && inputs.maven-central != 'true'
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        # Default JDK for building and releasing the Maven artifacts.
+        java-version: ${{ inputs.java == 'true' && '21' || inputs.java }}
+        cache: maven
+        cache-dependency-path: maven/**/pom.xml
+    - if: inputs.maven-central == 'true'
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: "21"
+        server-id: central
+        server-username: MAVEN_CENTRAL_USERNAME
+        server-password: MAVEN_CENTRAL_PASSWORD
+        gpg-private-key: ${{ inputs.gpg-private-key }}
+        gpg-passphrase: MAVEN_GPG_PASSPHRASE

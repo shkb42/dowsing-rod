@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Native structural analysis for Java (`.java`): methods, constructors, record compact constructors, lambdas, and methods of anonymous and local classes. Modern syntax is understood: switch expressions, pattern matching, text blocks, try-with-resources, and records. Trivial getters and setters are skipped, and annotations and modifiers are metadata, not structure.
+- Maven distribution, published to Maven Central under `io.github.38e9b0f8`. `dowsing-rod-maven-plugin` adds the `scan`, `auto`, `init`, `check` (build gate), `cache-clear`, and `help` goals and runs once per reactor by default. `dowsing-rod-java` is a dependency-free Java 8+ API. `dowsing-rod-native` holds the per-platform binaries, verified by SHA-256. Java 8+ and Maven 3.6.3+ are enough; no Python, Node, or .NET is needed.
+- Static musl builds for Linux x64 and arm64 (Alpine). They ship as the npm packages `dowsing-rod-native-linux-{x64,arm64}-musl`, the NuGet RIDs `linux-musl-{x64,arm64}`, and the Maven classifiers `linux-{x86_64,aarch_64}-musl`. The npm and NuGet launchers pick them automatically instead of refusing to run on musl.
 - Native structural analysis for Rust: functions, impl and trait methods with bodies, nested functions, closures, and async fn.
 - Normalization of Rust control flow (`if`/`match`/`loop`/`while`/`for`/`?`), `self` vs locals, destructured bindings, path call names, and macro invocations.
 - `dowsing-rod init` writes a `dowsing-rod.toml` with the recommended default configuration.
@@ -20,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `.java` files are now scanned. On mixed-language repositories that contain Java, a scan reports more functions and clusters than before. To keep the previous results, add `exclude = ["**/*.java"]`. Output for every other language is unchanged.
+- `.gradle` is skipped by default, like `target` and `build`.
 - Configuration is found in the scanned folder or the nearest folder above it, which also becomes the project root for the cache and displayed paths.
 - `dowsing_core::scan` no longer reads configuration files. Callers build a `ScanConfig` from `config::load_file_config` and apply their own options on top.
 - The version is set once, in `Cargo.toml`. `pyproject.toml`, the npm packages, and the NuGet package derive it, and CI tool versions live in `.github/actions/toolchain`.

@@ -106,3 +106,65 @@ jobs:
           dotnet tool install --tool-path "$RUNNER_TEMP/dowsing-rod-tool" --add-source "$GITHUB_WORKSPACE/dist/nuget" dowsing-rod --version "$VERSION"
           "$RUNNER_TEMP/dowsing-rod-tool/dowsing-rod" version
           "$RUNNER_TEMP/dowsing-rod-tool/dowsing-rod" scan tests/languages --format json --no-cache --fail-on-error
+
+  maven:
+    name: Maven plugin (${{ matrix.os }}, JDK ${{ matrix.java }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Java 8 is the supported floor; 21 is the build JDK.
+          - { os: ubuntu-latest, java: '8' }
+          - { os: ubuntu-latest, java: '21' }
+          - { os: windows-latest, java: '21' }
+          - { os: macos-latest, java: '21' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/toolchain
+        with:
+          node: true
+          java: ${{ matrix.java }}
+      - name: Build the host binary and stage it for dowsing-rod-native
+        shell: bash
+        run: |
+          cargo build -p dowsing-cli --release --locked
+          node scripts/package-maven.mjs host target/release/dowsing-rod${{ runner.os == 'Windows' && '.exe' || '' }}
+          node scripts/version.mjs --maven-config
+      - name: Build, unit-test, and run the plugin integration tests
+        working-directory: maven
+        run: ${{ runner.os == 'Windows' && '.\mvnw.cmd' || 'sh mvnw' }} -B -ntp install "-Ddowsing.requireNative=true"
+
+  musl:
+    name: musl / Alpine (static binary, npm, Maven)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+      - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/toolchain
+        with:
+          node: true
+          zig: true
+      - name: Build a static musl binary
+        run: cargo zigbuild -p dowsing-cli --release --locked --target x86_64-unknown-linux-musl
+      - name: Check it is static and runs on Alpine
+        run: |
+          BINARY=target/x86_64-unknown-linux-musl/release/dowsing-rod
+          test -z "$(readelf --program-headers "$BINARY" | grep INTERP || true)"
+          docker run --rm -v "$GITHUB_WORKSPACE:/work:ro" -w /work alpine:3.20 "$BINARY" scan tests/languages --format json --no-cache --fail-on-error > /dev/null
+      - name: Test the npm launcher on Alpine
+        run: |
+          node scripts/package-npm.mjs linux-x64-musl target/x86_64-unknown-linux-musl/release/dowsing-rod
+          node scripts/package-npm.mjs launcher -
+          docker run --rm -v "$GITHUB_WORKSPACE:/work" -w /work node:24-alpine node scripts/test-npm.mjs
+      - name: Build and test the Maven plugin on Alpine
+        run: |
+          node scripts/package-maven.mjs linux-x86_64-musl target/x86_64-unknown-linux-musl/release/dowsing-rod
+          node scripts/version.mjs --maven-config
+          docker run --rm -v "$GITHUB_WORKSPACE:/work" -w /work/maven eclipse-temurin:21-jdk-alpine \
+            sh mvnw -B -ntp install -Ddowsing.requireNative=true

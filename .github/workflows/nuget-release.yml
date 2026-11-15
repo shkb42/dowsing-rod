@@ -36,6 +36,8 @@ jobs:
           test -f nuget/dowsing-rod/native/osx-x64/dowsing-rod
           test -f nuget/dowsing-rod/native/linux-arm64/dowsing-rod
           test -f nuget/dowsing-rod/native/linux-x64/dowsing-rod
+          test -f nuget/dowsing-rod/native/linux-musl-arm64/dowsing-rod
+          test -f nuget/dowsing-rod/native/linux-musl-x64/dowsing-rod
           test -f nuget/dowsing-rod/native/win-x64/dowsing-rod.exe
       - run: dotnet pack nuget/dowsing-rod --configuration Release --output dist/nuget
       - name: Test installed tool
