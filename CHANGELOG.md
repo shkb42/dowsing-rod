@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-rc.1] - 2026-11-27
+
+Release candidate for 0.3.0, published to Maven Central only (`io.github.shkb42`). It contains everything listed under 0.3.0 below.
+
 ## [0.3.0] - Unreleased
 
 ### Added
