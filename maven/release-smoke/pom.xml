@@ -21,7 +21,7 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>io.github.38e9b0f8</groupId>
+        <groupId>io.github.shkb42</groupId>
         <artifactId>dowsing-rod-maven-plugin</artifactId>
         <version>${dowsing-rod.version}</version>
         <executions>

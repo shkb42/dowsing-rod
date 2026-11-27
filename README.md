@@ -54,7 +54,7 @@ dotnet tool install --global dowsing-rod
 With Maven (no Python, Node, or .NET required; see [Maven](#maven)):
 
 ```bash
-mvn io.github.38e9b0f8:dowsing-rod-maven-plugin:scan
+mvn io.github.shkb42:dowsing-rod-maven-plugin:scan
 ```
 
 From a local checkout:
@@ -112,8 +112,8 @@ dowsing-rod scan . --format jsonl
 In a Maven project, with no install needed (see [Maven](#maven) for adding it to `pom.xml` and gating builds):
 
 ```bash
-mvn io.github.38e9b0f8:dowsing-rod-maven-plugin:scan
-mvn io.github.38e9b0f8:dowsing-rod-maven-plugin:scan -Ddowsing-rod.ai=true -Ddowsing-rod.maxTokens=4000
+mvn io.github.shkb42:dowsing-rod-maven-plugin:scan
+mvn io.github.shkb42:dowsing-rod-maven-plugin:scan -Ddowsing-rod.ai=true -Ddowsing-rod.maxTokens=4000
 ```
 
 ## Example Human Output
@@ -224,14 +224,14 @@ dowsing_rod.clear_cache(path=".") -> int
 
 ## Maven
 
-The Maven plugin runs the same native scanner as the CLI. On first use it resolves a prebuilt binary for the build machine (`io.github.38e9b0f8:dowsing-rod-native`, one classifier jar per platform) from your usual Maven repositories, and checks its SHA-256 before running it. You need Java 8+ and Maven 3.6.3+; no Python, Node, or .NET. Mirrors, repository managers, and offline mode (`-o`) work as for any other plugin.
+The Maven plugin runs the same native scanner as the CLI. On first use it resolves a prebuilt binary for the build machine (`io.github.shkb42:dowsing-rod-native`, one classifier jar per platform) from your usual Maven repositories, and checks its SHA-256 before running it. You need Java 8+ and Maven 3.6.3+; no Python, Node, or .NET. Mirrors, repository managers, and offline mode (`-o`) work as for any other plugin.
 
 ### 1. Try it without changing your POM
 
 From the root of any Maven project:
 
 ```bash
-mvn io.github.38e9b0f8:dowsing-rod-maven-plugin:scan
+mvn io.github.shkb42:dowsing-rod-maven-plugin:scan
 ```
 
 It prints the human-readable report to the build log. In a multi-module project it runs once at the root and scans every module, so it also finds code duplicated *between* modules.
@@ -242,7 +242,7 @@ It prints the human-readable report to the build log. In a multi-module project 
 <build>
   <plugins>
     <plugin>
-      <groupId>io.github.38e9b0f8</groupId>
+      <groupId>io.github.shkb42</groupId>
       <artifactId>dowsing-rod-maven-plugin</artifactId>
       <version>0.3.0</version>
       <executions>
@@ -257,7 +257,7 @@ It prints the human-readable report to the build log. In a multi-module project 
 </build>
 ```
 
-`mvn verify` now reports refactoring opportunities on every build. With the plugin declared, the short prefix works: `mvn dowsing-rod:scan`. To use the prefix in any project, add `<pluginGroup>io.github.38e9b0f8</pluginGroup>` to `~/.m2/settings.xml`.
+`mvn verify` now reports refactoring opportunities on every build. With the plugin declared, the short prefix works: `mvn dowsing-rod:scan`. To use the prefix in any project, add `<pluginGroup>io.github.shkb42</pluginGroup>` to `~/.m2/settings.xml`.
 
 ### 3. Common setups
 
@@ -507,15 +507,17 @@ The version is set in one place: `version` under `[workspace.package]` in `Cargo
 
 Tool versions for CI and releases (Node, Zig, cargo-zigbuild, .NET, Java) are likewise set once, in `.github/actions/toolchain/action.yml`. Maven is pinned by the Maven Wrapper in `maven/.mvn/wrapper/maven-wrapper.properties`. The Maven build takes its version from `Cargo.toml` too: `node scripts/version.mjs --maven-config` writes `maven/.mvn/maven.config`, and a test fails if the two ever differ.
 
-The release workflows build and test every package before publishing. PyPI and NuGet use trusted publishing. npm uses trusted publishing after its first release; set a temporary `NPM_TOKEN` in the `npm-release` environment for that bootstrap, configure the publisher for `dowsing-rod` and the five `dowsing-rod-native-*` packages, then delete the token. Configure environment approval before the first release. Dispatch the npm and NuGet workflows from a matching `v<version>` tag with `publish` enabled.
+The release workflows build and test every package before publishing. PyPI publishing is currently disabled: `python-release.yml` builds and tests the wheels and sdist but does not upload them (see `TODO.md`). NuGet uses trusted publishing. npm uses trusted publishing after its first release; set a temporary `NPM_TOKEN` in the `npm-release` environment for that bootstrap, configure the publisher for `dowsing-rod` and the five `dowsing-rod-native-*` packages, then delete the token. Configure environment approval before the first release. Dispatch the npm and NuGet workflows from a matching `v<version>` tag with `publish` enabled.
 
 Maven Central has no trusted publishing. Before the first Maven release:
 
-1. Verify the `io.github.38e9b0f8` namespace at [central.sonatype.com](https://central.sonatype.com).
+1. Verify the `io.github.shkb42` namespace at [central.sonatype.com](https://central.sonatype.com).
 2. Create a Central Portal user token and a GPG signing key, and publish the public key to a keyserver.
 3. Add `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `MAVEN_GPG_PRIVATE_KEY`, and `MAVEN_GPG_PASSPHRASE` to a `maven-release` environment with required reviewers.
 
-`maven-release.yml` builds all seven native binaries and stages the Maven artifacts. It tests them from a clean project on Linux, macOS, Windows, and Alpine. Only then, from a `v<version>` tag with `publish` enabled and the environment approved, does it sign and publish them as one Central deployment. Central releases cannot be replaced, so dispatch it without `publish` first.
+`maven-release.yml` builds all seven native binaries and stages the Maven artifacts. It tests them from a clean project on Linux, macOS, Windows, and Alpine. Only then, from a `v<version>` tag with `publish` enabled and the environment approved, does it sign and publish them as one Central deployment. Central releases cannot be replaced, so dispatch it without `publish` first. The publish job also checks that the tag is on `main`, rebuilds and checks that every jar is byte-identical to the tested one, attaches a CycloneDX SBOM to each module, and records a GitHub build-provenance attestation (`gh attestation verify <jar> -R shkb42/dowsing-rod`).
+
+Security checks run in `security.yml` (CodeQL, zizmor and actionlint, gitleaks, cargo-deny with `deny.toml`, and dependency review on pull requests) and `scorecard.yml` (OpenSSF Scorecard). Dependabot keeps the SHA-pinned actions and the dependencies current.
 
 The npm musl packages, `dowsing-rod-native-linux-x64-musl` and `dowsing-rod-native-linux-arm64-musl`, are new package names. Bootstrap their trusted publishers the same way as the first npm release.
 

@@ -2,7 +2,7 @@ name: Build native binaries
 
 # Shared by the npm, NuGet, and Maven release workflows, so the platform list, the
 # compatibility floors (glibc 2.17, static musl, macOS 11.0 and 10.12), and the
-# build-and-test steps are set once.
+# build-and-test steps are set once. Release builds use no caches (cache-poisoning guard).
 on:
   workflow_call:
     inputs:
@@ -17,6 +17,7 @@ permissions:
 jobs:
   build:
     name: Build and test (${{ matrix.platform }})
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -32,19 +33,23 @@ jobs:
           - { runner: windows-2022, platform: win32-x64, rid: win-x64, maven: windows-x86_64, rust_target: x86_64-pc-windows-msvc, artifact_target: x86_64-pc-windows-msvc, builder: cargo, static_crt: true, suffix: '.exe' }
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
+        with:
+          toolchain: stable
           targets: ${{ matrix.rust_target }}
           components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
       - uses: ./.github/actions/toolchain
         with:
           node: true
           zig: ${{ matrix.builder == 'zig' }}
       - name: Set macOS deployment target
         if: matrix.macos
-        run: echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_deployment_target }}" >> "$GITHUB_ENV"
+        env:
+          DEPLOYMENT_TARGET: ${{ matrix.macos_deployment_target }}
+        run: echo "MACOSX_DEPLOYMENT_TARGET=$DEPLOYMENT_TARGET" >> "$GITHUB_ENV"
       - name: Statically link the Windows C runtime
         if: matrix.static_crt
         shell: bash
@@ -90,7 +95,7 @@ jobs:
         if: inputs.package == 'npm' && matrix.platform == 'linux-x64'
         run: npm pack ./dist/npm/dowsing-rod --pack-destination dist/tarballs --ignore-scripts
       - if: inputs.package == 'npm'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: npm-${{ matrix.platform }}
           path: dist/tarballs/*.tgz
@@ -103,7 +108,7 @@ jobs:
       # Upload the parent folder: upload-artifact drops the top folder of a single
       # path, and the package job needs each binary under its <rid>/ folder.
       - if: inputs.package == 'nuget'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: nuget-native-${{ matrix.rid }}
           path: dist/nuget-native
@@ -114,7 +119,7 @@ jobs:
         if: inputs.package == 'maven'
         run: node scripts/package-maven.mjs ${{ matrix.maven }} target/${{ matrix.artifact_target }}/release/dowsing-rod${{ matrix.suffix }} dist/maven-native
       - if: inputs.package == 'maven'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: maven-native-${{ matrix.maven }}
           path: dist/maven-native

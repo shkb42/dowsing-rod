@@ -28,7 +28,7 @@ uvx dowsing-rod scan . --ai --max-tokens 2500 --exclude "tests/**"
 npx dowsing-rod scan . --ai --max-tokens 2500 --exclude "tests/**"
 
 # Via Maven (Java projects; JDK + Maven only)
-mvn io.github.38e9b0f8:dowsing-rod-maven-plugin:scan -Ddowsing-rod.ai=true -Ddowsing-rod.maxTokens=2500
+mvn io.github.shkb42:dowsing-rod-maven-plugin:scan -Ddowsing-rod.ai=true -Ddowsing-rod.maxTokens=2500
 ```
 
 Or to inspect test suite parametrization opportunities:
@@ -57,8 +57,8 @@ max_clusters = 10
 In a Maven project, use the Maven plugin. It needs only the JDK and Maven that are already there, with no `uvx`/`npx`. It scans the whole reactor once from the root:
 
 ```bash
-mvn io.github.38e9b0f8:dowsing-rod-maven-plugin:scan -Ddowsing-rod.ai=true -Ddowsing-rod.maxTokens=2500
-mvn io.github.38e9b0f8:dowsing-rod-maven-plugin:init   # then: ...:auto
+mvn io.github.shkb42:dowsing-rod-maven-plugin:scan -Ddowsing-rod.ai=true -Ddowsing-rod.maxTokens=2500
+mvn io.github.shkb42:dowsing-rod-maven-plugin:init   # then: ...:auto
 ```
 
 Do not add `-q`: the report is logged at INFO level. If the project's `pom.xml` already declares `dowsing-rod-maven-plugin`, `mvn dowsing-rod:scan` / `mvn dowsing-rod:auto` is enough. Its `check` goal fails the build on configured thresholds (`maxClustersFound`, `maxHighValueClusters`, `failOnClassifications`). In Maven output, each report line has an `[INFO] ` prefix.
@@ -106,7 +106,7 @@ pip install dowsing-rod
 # npm:
 npm install -g dowsing-rod
 
-# Maven (in pom.xml): io.github.38e9b0f8:dowsing-rod-maven-plugin, goal `check` or `scan`
+# Maven (in pom.xml): io.github.shkb42:dowsing-rod-maven-plugin, goal `check` or `scan`
 
 # Cargo (from source):
 cargo install --path crates/dowsing-cli

@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.github.38e9b0f8</groupId>
+    <groupId>io.github.shkb42</groupId>
     <artifactId>dowsing-rod-parent</artifactId>
     <version>${revision}</version>
   </parent>
@@ -30,7 +30,7 @@
 
   <dependencies>
     <dependency>
-      <groupId>io.github.38e9b0f8</groupId>
+      <groupId>io.github.shkb42</groupId>
       <artifactId>dowsing-rod-java</artifactId>
       <version>${project.version}</version>
     </dependency>

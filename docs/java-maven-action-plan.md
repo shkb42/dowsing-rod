@@ -2,7 +2,7 @@
 
 Status: **Phases 0–6 implemented on branch `feature/java-maven`** (2026-11-15). Decisions taken:
 
-- **D2 groupId:** `io.github.38e9b0f8`.
+- **D2 groupId:** `io.github.shkb42` (this fork publishes the Maven channel; upstream links stay on `38e9b0f8`).
 - **D3 Java floor:** Java **8**.
 - **D4 Maven:** Maven 3.6.3+.
 - **D5 musl:** included, for npm, NuGet, and Maven.

@@ -3,6 +3,7 @@ name = "dowsing-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+publish = false
 description = "Core analysis engine for Dowsing Rod — structural refactoring intelligence for source code"
 
 [dependencies]

@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Native structural analysis for Java (`.java`): methods, constructors, record compact constructors, lambdas, and methods of anonymous and local classes. Modern syntax is understood: switch expressions, pattern matching, text blocks, try-with-resources, and records. Trivial getters and setters are skipped, and annotations and modifiers are metadata, not structure.
-- Maven distribution, published to Maven Central under `io.github.38e9b0f8`. `dowsing-rod-maven-plugin` adds the `scan`, `auto`, `init`, `check` (build gate), `cache-clear`, and `help` goals and runs once per reactor by default. `dowsing-rod-java` is a dependency-free Java 8+ API. `dowsing-rod-native` holds the per-platform binaries, verified by SHA-256. Java 8+ and Maven 3.6.3+ are enough; no Python, Node, or .NET is needed.
+- Maven distribution, published to Maven Central under `io.github.shkb42`. `dowsing-rod-maven-plugin` adds the `scan`, `auto`, `init`, `check` (build gate), `cache-clear`, and `help` goals and runs once per reactor by default. `dowsing-rod-java` is a dependency-free Java 8+ API. `dowsing-rod-native` holds the per-platform binaries, verified by SHA-256. Java 8+ and Maven 3.6.3+ are enough; no Python, Node, or .NET is needed.
 - Static musl builds for Linux x64 and arm64 (Alpine). They ship as the npm packages `dowsing-rod-native-linux-{x64,arm64}-musl`, the NuGet RIDs `linux-musl-{x64,arm64}`, and the Maven classifiers `linux-{x86_64,aarch_64}-musl`. The npm and NuGet launchers pick them automatically instead of refusing to run on musl.
 - Native structural analysis for Rust: functions, impl and trait methods with bodies, nested functions, closures, and async fn.
 - Normalization of Rust control flow (`if`/`match`/`loop`/`while`/`for`/`?`), `self` vs locals, destructured bindings, path call names, and macro invocations.
@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `dowsing-rod auto` scans using only the project's configuration file, for hooks, CI, and coding agents. It fails when no configuration exists.
 - `format` and `fail_on_error` configuration keys. `scan` uses `format` when neither `--format` nor `--ai` is passed.
 - The cache directory writes its own `.gitignore`, so git ignores it automatically.
+- Security and supply-chain CI: `security.yml` (CodeQL, zizmor and actionlint, gitleaks, cargo-deny, dependency review), OpenSSF Scorecard, and Dependabot. Every action is pinned to a commit SHA, release jobs use no caches, and Maven releases add CycloneDX SBOMs, build-provenance attestations, and a check that published jars are byte-identical to the tested ones.
 - `--no-fail-on-error` turns off `fail_on_error = true` from configuration.
 - Unknown configuration keys produce a warning instead of being silently ignored.
 

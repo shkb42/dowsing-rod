@@ -7,7 +7,7 @@ import java.util.Properties;
 /** The Dowsing Rod version this library was built for (the version in Cargo.toml). */
 public final class Version {
     /** Maven groupId of every Dowsing Rod artifact. */
-    public static final String GROUP_ID = "io.github.38e9b0f8";
+    public static final String GROUP_ID = "io.github.shkb42";
 
     /** artifactId of the per-platform classifier jars holding the native executable. */
     public static final String NATIVE_ARTIFACT_ID = "dowsing-rod-native";

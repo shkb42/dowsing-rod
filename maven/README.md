@@ -2,7 +2,7 @@
 
 These artifacts run the same native Rust scanner as the CLI, the npm package, and the NuGet tool. Analysis is local and offline. You need Java 8+ and Maven 3.6.3+; nothing else.
 
-| Artifact (`io.github.38e9b0f8:…`) | What it is |
+| Artifact (`io.github.shkb42:…`) | What it is |
 |---|---|
 | `dowsing-rod-maven-plugin` | The Maven plugin (goal prefix `dowsing-rod`) |
 | `dowsing-rod-java` | A dependency-free Java 8+ API used by the plugin, for your own tools |
@@ -16,14 +16,14 @@ All versions equal the Rust version in `Cargo.toml`.
 Try it on any Maven project without editing the POM:
 
 ```bash
-mvn io.github.38e9b0f8:dowsing-rod-maven-plugin:scan
+mvn io.github.shkb42:dowsing-rod-maven-plugin:scan
 ```
 
 Add it to the build, so `mvn verify` reports on every run and CI can gate on it:
 
 ```xml
 <plugin>
-  <groupId>io.github.38e9b0f8</groupId>
+  <groupId>io.github.shkb42</groupId>
   <artifactId>dowsing-rod-maven-plugin</artifactId>
   <version>0.3.0</version>
   <executions>
@@ -62,7 +62,7 @@ Don't use `mvn -q`: it hides the report, which is logged at INFO level. More rec
 | `cache-clear` | none | `dowsing-rod cache clear <dir>` |
 | `help` | none | Parameter reference (`mvn dowsing-rod:help -Ddetail=true`) |
 
-`scan`, `auto`, `init`, and `cache-clear` also work without a `pom.xml`, in the current folder: `mvn io.github.38e9b0f8:dowsing-rod-maven-plugin:scan`.
+`scan`, `auto`, `init`, and `cache-clear` also work without a `pom.xml`, in the current folder: `mvn io.github.shkb42:dowsing-rod-maven-plugin:scan`.
 
 ### Scan options (`scan`, `check`)
 

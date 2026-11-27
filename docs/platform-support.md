@@ -13,7 +13,7 @@ The npm launcher requires Node 22+, and the NuGet tool requires a supported .NET
 
 The Maven plugin and the `dowsing-rod-java` library need Java 8 or later and Maven 3.6.3 or later. They are tested on Java 8 and 21, with Maven 3.9 through the Maven Wrapper, on Linux, macOS, Windows, and Alpine.
 
-The plugin resolves one `io.github.38e9b0f8:dowsing-rod-native` classifier jar for the build machine. This is the same repository resolution that every other plugin uses, so mirrors, repository managers, and offline mode (`-o`) work unchanged:
+The plugin resolves one `io.github.shkb42:dowsing-rod-native` classifier jar for the build machine. This is the same repository resolution that every other plugin uses, so mirrors, repository managers, and offline mode (`-o`) work unchanged:
 
 | Classifier | Platform |
 |---|---|

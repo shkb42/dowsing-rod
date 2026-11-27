@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>io.github.38e9b0f8</groupId>
+  <groupId>io.github.shkb42</groupId>
   <artifactId>dowsing-rod-parent</artifactId>
   <!-- The version is set once, in Cargo.toml. Running scripts/version.mjs with the maven-config
        flag writes .mvn/maven.config with -Drevision=<version>; CI runs it before every build. -->
@@ -13,7 +13,7 @@
 
   <name>Dowsing Rod (parent)</name>
   <description>Structural refactoring intelligence for source code — Rust-native, offline, AI-ready.</description>
-  <url>https://github.com/38e9b0f8/dowsing-rod</url>
+  <url>https://github.com/shkb42/dowsing-rod</url>
   <inceptionYear>2026</inceptionYear>
 
   <licenses>
@@ -28,19 +28,19 @@
     <developer>
       <id>dowsing-rod</id>
       <name>Dowsing Rod contributors</name>
-      <url>https://github.com/38e9b0f8/dowsing-rod/graphs/contributors</url>
+      <url>https://github.com/shkb42/dowsing-rod/graphs/contributors</url>
     </developer>
   </developers>
 
   <scm>
-    <connection>scm:git:https://github.com/38e9b0f8/dowsing-rod.git</connection>
-    <developerConnection>scm:git:https://github.com/38e9b0f8/dowsing-rod.git</developerConnection>
-    <url>https://github.com/38e9b0f8/dowsing-rod</url>
+    <connection>scm:git:https://github.com/shkb42/dowsing-rod.git</connection>
+    <developerConnection>scm:git:https://github.com/shkb42/dowsing-rod.git</developerConnection>
+    <url>https://github.com/shkb42/dowsing-rod</url>
   </scm>
 
   <issueManagement>
     <system>GitHub</system>
-    <url>https://github.com/38e9b0f8/dowsing-rod/issues</url>
+    <url>https://github.com/shkb42/dowsing-rod/issues</url>
   </issueManagement>
 
   <modules>
@@ -235,6 +235,36 @@
       <properties>
         <maven.compiler.release>${java.floor}</maven.compiler.release>
       </properties>
+    </profile>
+
+    <!-- CycloneDX SBOM (bom.json/bom.xml attached as the "cyclonedx" classifier, so it is staged,
+         signed, and published with each module). Enabled by maven-release.yml for both the staging
+         and the publish build; needs JDK 11+, so it stays out of the JDK 8 CI job. -->
+    <profile>
+      <id>sbom</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.cyclonedx</groupId>
+            <artifactId>cyclonedx-maven-plugin</artifactId>
+            <version>2.9.3</version>
+            <configuration>
+              <projectType>library</projectType>
+              <outputFormat>all</outputFormat>
+              <includeTestScope>false</includeTestScope>
+            </configuration>
+            <executions>
+              <execution>
+                <id>sbom</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>makeBom</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
 
     <!-- Maven Central: sources, javadoc, signatures, and one atomic deployment bundle. -->
