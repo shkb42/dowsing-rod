@@ -136,7 +136,7 @@ jobs:
     if: inputs.publish && startsWith(github.ref, 'refs/tags/v')
     needs: test-installed
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75 # waitMaxTime in maven/pom.xml is 60 minutes
     environment: maven-release
     permissions:
       contents: read

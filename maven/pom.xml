@@ -162,7 +162,7 @@
         <plugin>
           <groupId>org.sonatype.central</groupId>
           <artifactId>central-publishing-maven-plugin</artifactId>
-          <version>0.7.0</version>
+          <version>0.12.0</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -325,6 +325,8 @@
               <!-- Uploaded and validated here; published only after this workflow's approval gate. -->
               <autoPublish>true</autoPublish>
               <waitUntil>published</waitUntil>
+              <!-- Seconds; Central validation plus publishing usually takes 5-30 minutes. -->
+              <waitMaxTime>3600</waitMaxTime>
               <deploymentName>dowsing-rod ${project.version}</deploymentName>
             </configuration>
           </plugin>
