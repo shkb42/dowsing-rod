@@ -73,11 +73,15 @@ jobs:
           test -f "$BASE/dowsing-rod-parent/$VERSION/dowsing-rod-parent-$VERSION.pom"
           test -f "$BASE/dowsing-rod-java/$VERSION/dowsing-rod-java-$VERSION.jar"
           test -f "$BASE/dowsing-rod-maven-plugin/$VERSION/dowsing-rod-maven-plugin-$VERSION.jar"
-          test "$(ls "$BASE/dowsing-rod-native/$VERSION/"dowsing-rod-native-"$VERSION"-*.jar | wc -l)" -eq 7
+          test "$(find "$BASE/dowsing-rod-native/$VERSION" -name "dowsing-rod-native-$VERSION-*.jar" | wc -l)" -eq 7
           for artifact in dowsing-rod-java dowsing-rod-maven-plugin dowsing-rod-native; do
             test -f "$BASE/$artifact/$VERSION/$artifact-$VERSION-cyclonedx.json"
           done
-          ! grep -rl '${revision}' "$BASE" --include='*.pom'
+          # Published POMs must carry the concrete version, not the unresolved literal ${revision}.
+          # shellcheck disable=SC2016
+          if grep -rl '${revision}' "$BASE" --include='*.pom'; then
+            echo "::error::unresolved \${revision} in the POMs above"; exit 1
+          fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: maven-staging
