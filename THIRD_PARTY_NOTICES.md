@@ -177,7 +177,7 @@ Source: <https://github.com/RustPython/malachite-bigint> and <https://crates.io/
 
 ### How these libraries are used, and how to replace them
 
-The malachite libraries provide arbitrary-precision integers for `rustpython-parser`, which parses Python source. They are statically linked, unmodified, into every native `dowsing-rod` binary: the CLI, the Python extension, and the npm and NuGet packages.
+The malachite libraries provide arbitrary-precision integers for `rustpython-parser`, which parses Python source. They are statically linked, unmodified, into every native `dowsing-rod` binary: the CLI, the Python extension, the npm and NuGet packages, and the Maven `dowsing-rod-native` jars.
 
 Dowsing Rod itself is open source under the MIT License. Its complete source code, including the exact dependency versions in `Cargo.lock`, is at <https://github.com/38e9b0f8/dowsing-rod> under the release tag (for example `v0.3.0`). To build Dowsing Rod with a modified version of these libraries, check out that tag, point Cargo at your copy, and rebuild:
 
@@ -192,7 +192,7 @@ cargo build -p dowsing-cli --release   # the CLI, in target/release/
 pip install .                          # the Python package, including its extension
 ```
 
-The resulting CLI replaces the one in the npm and NuGet packages and can be run directly.
+The resulting CLI replaces the one in the npm, NuGet, and Maven packages: run it directly, or point the Maven plugin at it with `binaryPath`.
 
 The LGPL-3.0 supplements the GNU General Public License, version 3; both texts follow.
 
