@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-rc.3] - 2026-11-28
+
+Third release candidate for 0.3.0, published to Maven Central only. It contains the fixes found by testing rc.2 on Spring PetClinic, Apache Commons Lang, and Guava; see the 0.3.0 Fixed and Changed sections below: candidate generation on large repositories, Java varargs annotations, the minimum function size, and `?` symbols on Windows consoles.
+
 ## [0.3.0-rc.2] - 2026-11-27
 
 Second release candidate for 0.3.0, published to Maven Central only. No code changes since rc.1.
