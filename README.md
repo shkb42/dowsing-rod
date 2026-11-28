@@ -14,7 +14,7 @@ It works offline. Source code is parsed locally, normalized locally, and rendere
 
 ## Status
 
-The current release, 0.3.0, adds Java scanning and a Maven plugin on Maven Central, static musl builds, and faster, more complete candidate generation on large repositories. See [CHANGELOG.md](CHANGELOG.md) for each release. The scanner remains local-first: parsing, normalization, scoring, caching, and rendering all happen on the machine running it.
+The current release, 0.4.0, adds Java scanning and a Maven plugin on Maven Central, static musl builds, and faster, more complete candidate generation on large repositories. See [CHANGELOG.md](CHANGELOG.md) for each release. The scanner remains local-first: parsing, normalization, scoring, caching, and rendering all happen on the machine running it.
 
 ## Real-World Results
 
@@ -255,7 +255,7 @@ It prints the human-readable report to the build log. In a multi-module project 
     <plugin>
       <groupId>io.github.shkb42</groupId>
       <artifactId>dowsing-rod-maven-plugin</artifactId>
-      <version>0.3.0</version>
+      <version>0.4.0</version>
       <executions>
         <execution>
           <goals>

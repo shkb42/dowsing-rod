@@ -5,25 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - 2026-11-28
+## [0.4.0] - 2026-11-28
 
-Published to Maven Central (`io.github.shkb42`) after three Maven-only release candidates (0.3.0-rc.1 to rc.3). PyPI, npm, and NuGet packages for 0.3.0 are not published from this fork yet. The candidates were tested on Spring PetClinic, Apache Commons Lang, Guava, and Flask; the results, with examples and known limitations, are in [docs/real-world-results.md](docs/real-world-results.md).
+Published to Maven Central (`io.github.shkb42`). Its release candidates were published there as 0.3.0-rc.1 to rc.3; the final version is 0.4.0 because 0.3.0 had already been released without these changes. PyPI, npm, and NuGet packages for 0.4.0 are not published from this fork yet. The candidates were tested on Spring PetClinic, Apache Commons Lang, Guava, and Flask; the results, with examples and known limitations, are in [docs/real-world-results.md](docs/real-world-results.md).
 
 ### Added
 
 - Native structural analysis for Java (`.java`): methods, constructors, record compact constructors, lambdas, and methods of anonymous and local classes. Modern syntax is understood: switch expressions, pattern matching, text blocks, try-with-resources, and records. Trivial getters and setters are skipped, and annotations and modifiers are metadata, not structure.
 - Maven distribution, published to Maven Central under `io.github.shkb42`. `dowsing-rod-maven-plugin` adds the `scan`, `auto`, `init`, `check` (build gate), `cache-clear`, and `help` goals and runs once per reactor by default. `dowsing-rod-java` is a dependency-free Java 8+ API. `dowsing-rod-native` holds the per-platform binaries, verified by SHA-256. Java 8+ and Maven 3.6.3+ are enough; no Python, Node, or .NET is needed.
 - Static musl builds for Linux x64 and arm64 (Alpine). They ship as the npm packages `dowsing-rod-native-linux-{x64,arm64}-musl`, the NuGet RIDs `linux-musl-{x64,arm64}`, and the Maven classifiers `linux-{x86_64,aarch_64}-musl`. The npm and NuGet launchers pick them automatically instead of refusing to run on musl.
-- Native structural analysis for Rust: functions, impl and trait methods with bodies, nested functions, closures, and async fn.
-- Normalization of Rust control flow (`if`/`match`/`loop`/`while`/`for`/`?`), `self` vs locals, destructured bindings, path call names, and macro invocations.
-- `dowsing-rod init` writes a `dowsing-rod.toml` with the recommended default configuration.
-- `dowsing-rod auto` scans using only the project's configuration file, for hooks, CI, and coding agents. It fails when no configuration exists.
-- `format` and `fail_on_error` configuration keys. `scan` uses `format` when neither `--format` nor `--ai` is passed.
-- The cache directory writes its own `.gitignore`, so git ignores it automatically.
 - `docs/real-world-results.md`: results on Spring PetClinic, Commons Lang, Guava, and Flask, with reproduction commands for Maven, the CLI, and Python.
 - Security and supply-chain CI: `security.yml` (CodeQL, zizmor and actionlint, gitleaks, cargo-deny, dependency review), OpenSSF Scorecard, and Dependabot. Every action is pinned to a commit SHA, release jobs use no caches, and Maven releases add CycloneDX SBOMs, build-provenance attestations, and a check that published jars are byte-identical to the tested ones.
-- `--no-fail-on-error` turns off `fail_on_error = true` from configuration.
-- Unknown configuration keys produce a warning instead of being silently ignored.
 
 ### Changed
 
@@ -31,9 +23,6 @@ Published to Maven Central (`io.github.shkb42`) after three Maven-only release c
 - Scoring is faster: tokens are interned once per scan, and oversized clusters are split in one pass instead of one edge at a time. Results are identical.
 - `.java` files are now scanned. On mixed-language repositories that contain Java, a scan reports more functions and clusters than before. To keep the previous results, add `exclude = ["**/*.java"]`. Output for every other language is unchanged.
 - `.gradle` is skipped by default, like `target` and `build`.
-- Configuration is found in the scanned folder or the nearest folder above it, which also becomes the project root for the cache and displayed paths.
-- `dowsing_core::scan` no longer reads configuration files. Callers build a `ScanConfig` from `config::load_file_config` and apply their own options on top.
-- The version is set once, in `Cargo.toml`. `pyproject.toml`, the npm packages, and the NuGet package derive it, and CI tool versions live in `.github/actions/toolchain`.
 
 ### Fixed
 
@@ -42,6 +31,28 @@ Published to Maven Central (`io.github.shkb42`) after three Maven-only release c
 - Large repositories no longer miss their most valuable duplication. Candidate generation was capped at 25,000 pairs per language, filled in bucket order, and skipped any SimHash bucket with more than 100 functions; on Commons Lang and Guava most of `ArrayUtils` and of Guava's `primitives` package was never compared. Each function is now compared with its 6 nearest SimHash neighbours of comparable size, so the work stays linear and nothing is dropped silently. Guava's per-type primitive helpers (`indexOf`, `reverse`, `rotate`, `concat`, …) went from 5 to 135 of 137 clustered, with similar scan times.
 - Java files with type annotations on varargs parameters (`Object @Nullable ... args`, common with JSpecify and the Checker Framework) failed to parse, including Guava's `Preconditions`, `Verify`, `Objects`, and `Strings`. The tree-sitter grammar accepts these annotations only after `...`, so they are now blanked before parsing; offsets and line numbers are unchanged.
 - The Maven plugin no longer prints `?` for the report's symbols on consoles with a legacy code page (the Windows default). Characters the console cannot show are replaced by ASCII equivalents (`•` → `*`, `→` → `->`, `—` → `-`), and the rest are kept. Report files are always UTF-8.
+
+## [0.3.0] - 2026-10-24
+
+### Added
+
+- Native structural analysis for Rust: functions, impl and trait methods with bodies, nested functions, closures, and async fn.
+- Normalization of Rust control flow (`if`/`match`/`loop`/`while`/`for`/`?`), `self` vs locals, destructured bindings, path call names, and macro invocations.
+- `dowsing-rod init` writes a `dowsing-rod.toml` with the recommended default configuration.
+- `dowsing-rod auto` scans using only the project's configuration file, for hooks, CI, and coding agents. It fails when no configuration exists.
+- `format` and `fail_on_error` configuration keys. `scan` uses `format` when neither `--format` nor `--ai` is passed.
+- The cache directory writes its own `.gitignore`, so git ignores it automatically.
+- `--no-fail-on-error` turns off `fail_on_error = true` from configuration.
+- Unknown configuration keys produce a warning instead of being silently ignored.
+
+### Changed
+
+- Configuration is found in the scanned folder or the nearest folder above it, which also becomes the project root for the cache and displayed paths.
+- `dowsing_core::scan` no longer reads configuration files. Callers build a `ScanConfig` from `config::load_file_config` and apply their own options on top.
+- The version is set once, in `Cargo.toml`. `pyproject.toml`, the npm packages, and the NuGet package derive it, and CI tool versions live in `.github/actions/toolchain`.
+
+### Fixed
+
 - `max_tokens` from configuration now applies to CLI AI output.
 - CLI flags and Python keyword arguments now override configuration even when they equal the default, for example `--min-similarity 0.75` over a configured `0.9`.
 - `scripts/test-npm.mjs` accepts npm 12's `npm pack --json` output.

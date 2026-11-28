@@ -11,7 +11,7 @@ What Dowsing Rod reports on well-known open-source projects, how long it takes, 
 | [google/guava](https://github.com/google/guava), without `android/` | Java | `cdb3863` (2026-11-25) | 1,678 | 31,892 |
 | [pallets/flask](https://github.com/pallets/flask) | Python | `49943b5` (2026-10-30) | 83 | 1,460 |
 
-Scanner: 0.3.0-rc.3, default settings, cache off. The Java projects were scanned through the Maven plugin from Maven Central, Flask through the CLI; both run the same native binary. Machine: a Windows 11 laptop with an Intel Core i5-1135G7 (4 cores, 8 threads).
+Scanner: 0.3.0-rc.3 (the same scanner as 0.4.0), default settings, cache off. The Java projects were scanned through the Maven plugin from Maven Central, Flask through the CLI; both run the same native binary. Machine: a Windows 11 laptop with an Intel Core i5-1135G7 (4 cores, 8 threads).
 
 Guava's `android/` tree is a near-copy of `guava/`. With it included, Dowsing Rod correctly pairs the two copies (9,578 clusters), which is accurate but not useful, so it is excluded as a user would exclude it.
 
@@ -146,15 +146,21 @@ cd commons-lang
 **Maven** (Java projects; Java 8+ and Maven 3.6.3+). On Windows PowerShell, quote each `-D` argument.
 
 ```bash
-mvn io.github.shkb42:dowsing-rod-maven-plugin:0.3.0:scan "-Ddowsing-rod.useCache=false"
-mvn io.github.shkb42:dowsing-rod-maven-plugin:0.3.0:scan "-Ddowsing-rod.format=json" "-Ddowsing-rod.outputFile=target/dowsing-rod.json"
+mvn io.github.shkb42:dowsing-rod-maven-plugin:0.4.0:scan "-Ddowsing-rod.useCache=false"
+mvn io.github.shkb42:dowsing-rod-maven-plugin:0.4.0:scan "-Ddowsing-rod.format=json" "-Ddowsing-rod.outputFile=target/dowsing-rod.json"
 # Guava: skip the android/ copy
-mvn io.github.shkb42:dowsing-rod-maven-plugin:0.3.0:scan "-Ddowsing-rod.excludes=android/**"
+mvn io.github.shkb42:dowsing-rod-maven-plugin:0.4.0:scan "-Ddowsing-rod.excludes=android/**"
 ```
 
-Some projects need a newer JDK just to load their POM; Spring PetClinic needs Java 17+ because of a build extension. The scanner itself does not; the plugin also runs without any `pom.xml`, from any folder: `mvn io.github.shkb42:dowsing-rod-maven-plugin:0.3.0:scan "-Ddowsing-rod.path=/path/to/project"`.
+Some projects need a newer JDK just to load their POM; Spring PetClinic needs Java 17+ because of a build extension. The scanner itself does not; the plugin also runs without any `pom.xml`, from any folder: `mvn io.github.shkb42:dowsing-rod-maven-plugin:0.4.0:scan "-Ddowsing-rod.path=/path/to/project"`.
 
-**CLI** (any language; install it from PyPI, npm, or NuGet as described in the [README](../README.md#install), version 0.3.0 or later for Java):
+**CLI** (any language). Java needs 0.4.0 or later. The PyPI, npm, and NuGet packages of 0.4.0 are not published yet, so build the CLI from source until they are; Python projects such as Flask can also use any published version, though results from versions before 0.4.0 differ (see [CHANGELOG.md](../CHANGELOG.md)):
+
+```bash
+cargo build -p dowsing-cli --release      # then use target/release/dowsing-rod
+```
+
+Then:
 
 ```bash
 dowsing-rod scan . --no-cache
@@ -162,7 +168,7 @@ dowsing-rod scan . --format json --no-cache > dowsing-rod.json
 dowsing-rod scan . --exclude 'android/**' --no-cache     # Guava
 ```
 
-**Python API:**
+**Python API** (from a source checkout, `pip install .`, until 0.4.0 is on PyPI):
 
 ```python
 import dowsing_rod

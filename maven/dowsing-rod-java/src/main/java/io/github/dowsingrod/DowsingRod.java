@@ -67,7 +67,7 @@ public final class DowsingRod {
         return executable;
     }
 
-    /** The version the executable reports, such as {@code 0.3.0}. */
+    /** The version the executable reports, such as {@code 0.4.0}. */
     public String version() {
         ProcessResult result = run(Collections.singletonList("version"), null, null, null);
         String out = result.stdout().trim();

@@ -113,7 +113,7 @@ It combines:
 - small partitions (up to 50,000 pairs): every remaining pair is scored;
 - larger partitions: each function is paired with its 6 nearest neighbours by SimHash Hamming distance (at most 12 bits), among functions no more than twice or half its size.
 
-The per-function budget is what keeps large repositories accurate. A single global cap (the approach before 0.3.0) filled up with dense groups of near-identical small functions, so the larger duplicated methods that matter most were never compared. The cost is linear in the number of functions per size band, and the number of scored pairs is at most six per function.
+The per-function budget is what keeps large repositories accurate. A single global cap (the approach before 0.4.0) filled up with dense groups of near-identical small functions, so the larger duplicated methods that matter most were never compared. The cost is linear in the number of functions per size band, and the number of scored pairs is at most six per function.
 
 ## Similarity Scoring
 
