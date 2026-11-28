@@ -4,9 +4,7 @@ Branch `feature/java-maven` adds Java analysis, musl builds, and the Maven distr
 
 ## 1. Before the first public release
 
-- [ ] **LGPL dependency.** `malachite*` (LGPL-3.0-only, pulled in by `rustpython-parser` for big integers) is statically linked into every shipped binary, including the Maven native jars. `deny.toml` allows it by name only, so CI passes. Decide one of these, then update `THIRD_PARTY_NOTICES.md`:
-  - Accept it and meet the LGPL terms: list it in the notices and point to the source and object files needed for relinking.
-  - Replace it, for example with a `rustpython-parser` build or fork that uses a permissive bigint crate.
+- [x] **LGPL dependency.** `malachite*` (LGPL-3.0-only, pulled in by `rustpython-parser`) is statically linked into every native binary. Resolved by compliance: `THIRD_PARTY_NOTICES.md`, which ships in every package, has the notice, both license texts, and how to rebuild against a modified copy. Update it whenever a malachite version changes (`deny.toml` allows the crates by name only).
 
 ## 2. GitHub repository setup (one-time, shkb42/dowsing-rod)
 
@@ -18,7 +16,7 @@ Branch `feature/java-maven` adds Java analysis, musl builds, and the Maven distr
 
 ## 3. Review and merge
 
-- [ ] Push `feature/java-maven` and open a PR to `main`. CI, Security, and Dependency review must pass. None of these jobs has run on GitHub yet:
+- [x] Push `feature/java-maven` and open a PR to `main`. CI, Security, and Dependency review must pass. None of these jobs has run on GitHub yet:
   - [ ] `maven` on Linux (JDK 8 and 21), Windows, and macOS
   - [ ] `musl`: static binary, npm launcher, and the Maven build on Alpine
   - [ ] Existing jobs: Rust and Python, glibc 2.17, npm and NuGet packed installs
@@ -42,16 +40,15 @@ Branch `feature/java-maven` adds Java analysis, musl builds, and the Maven distr
   - [ ] Deployment branches and tags: **selected tags only**, pattern `v*`.
   - [ ] Environment secrets (not repository secrets): `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD` (the token's two halves), `MAVEN_GPG_PRIVATE_KEY`, `MAVEN_GPG_PASSPHRASE`.
 
-## 5. First release (a release candidate; Central releases can never be replaced)
+## 5. Maven releases
 
-- [ ] Set `version = "0.3.0-rc.1"` in `Cargo.toml`, run `cargo update --workspace`, update `CHANGELOG.md`, and merge through a PR.
-- [ ] Dry run: *Actions → Maven release → Run workflow* on `main`, with **publish unchecked**. Every job must pass, including the staged-release tests on all seven platforms.
-- [ ] `git tag -s v0.3.0-rc.1 -m "v0.3.0-rc.1" && git push origin v0.3.0-rc.1`
-- [ ] *Maven release → Run workflow*, choose the **tag** `v0.3.0-rc.1`, check **publish**, then approve the `maven-release` deployment.
-- [ ] Check the deployment on central.sonatype.com (*Deployments*). Search can take 30 minutes to a few hours to show it.
-- [ ] Verify it as a user would: add the plugin to a fresh project and run `mvn verify` (README → Maven). Then check provenance: `gh attestation verify dowsing-rod-maven-plugin-0.3.0-rc.1.jar -R shkb42/dowsing-rod`.
-- [ ] Repeat with the final version, `0.3.0`.
-- [ ] After the first release, change `egress-policy: audit` to `block` in the publish job of `maven-release.yml`, allowing only the endpoints the harden-runner report lists.
+- [x] 0.3.0-rc.1: published; the provenance attestation was skipped because the Central plugin 0.7.0 failed while waiting (fixed in rc.2).
+- [x] 0.3.0-rc.2: published and attested. Testing it on real repositories found the candidate cap, varargs parsing, and Windows console problems.
+- [x] 0.3.0-rc.3: published with those fixes; results in [docs/real-world-results.md](docs/real-world-results.md).
+- [ ] 0.3.0: merge `release/0.3.0`, tag `v0.3.0` on `main`, run *Maven release* from the tag with **publish**, approve, then verify on Central and with `gh attestation verify`.
+- [ ] Before testing 0.3.0 locally, delete any locally built `~/.m2/repository/io/github/shkb42/*/0.3.0` so Maven uses the Central artifacts.
+- [ ] After 0.3.0, change `egress-policy: audit` to `block` in the publish job of `maven-release.yml`, allowing only the endpoints the harden-runner report lists.
+- [ ] Contribute upstream (38e9b0f8/dowsing-rod): open an issue first, then focused PRs from branches based on upstream `main` (CI and security hardening; Java and musl; Maven distribution with the namespace upstream chooses).
 
 ## 6. Python / PyPI (deploy deferred)
 

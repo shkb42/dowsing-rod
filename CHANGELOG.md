@@ -5,23 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0-rc.3] - 2026-11-28
+## [0.3.0] - 2026-11-28
 
-Third release candidate for 0.3.0, published to Maven Central only. It contains the fixes found by testing rc.2 on Spring PetClinic, Apache Commons Lang, and Guava; see the 0.3.0 Fixed and Changed sections below: candidate generation on large repositories, Java varargs annotations, the minimum function size, and `?` symbols on Windows consoles.
-
-## [0.3.0-rc.2] - 2026-11-27
-
-Second release candidate for 0.3.0, published to Maven Central only. No code changes since rc.1.
-
-### Fixed
-
-- Release pipeline: upgraded `central-publishing-maven-plugin` to 0.12.0. 0.7.0 failed while waiting for the deployment (rc.1 was published, but its build-provenance attestation was skipped).
-
-## [0.3.0-rc.1] - 2026-11-27
-
-Release candidate for 0.3.0, published to Maven Central only (`io.github.shkb42`). It contains everything listed under 0.3.0 below.
-
-## [0.3.0] - Unreleased
+Published to Maven Central (`io.github.shkb42`) after three Maven-only release candidates (0.3.0-rc.1 to rc.3). PyPI, npm, and NuGet packages for 0.3.0 are not published from this fork yet. The candidates were tested on Spring PetClinic, Apache Commons Lang, Guava, and Flask; the results, with examples and known limitations, are in [docs/real-world-results.md](docs/real-world-results.md).
 
 ### Added
 
@@ -34,6 +20,7 @@ Release candidate for 0.3.0, published to Maven Central only (`io.github.shkb42`
 - `dowsing-rod auto` scans using only the project's configuration file, for hooks, CI, and coding agents. It fails when no configuration exists.
 - `format` and `fail_on_error` configuration keys. `scan` uses `format` when neither `--format` nor `--ai` is passed.
 - The cache directory writes its own `.gitignore`, so git ignores it automatically.
+- `docs/real-world-results.md`: results on Spring PetClinic, Commons Lang, Guava, and Flask, with reproduction commands for Maven, the CLI, and Python.
 - Security and supply-chain CI: `security.yml` (CodeQL, zizmor and actionlint, gitleaks, cargo-deny, dependency review), OpenSSF Scorecard, and Dependabot. Every action is pinned to a commit SHA, release jobs use no caches, and Maven releases add CycloneDX SBOMs, build-provenance attestations, and a check that published jars are byte-identical to the tested ones.
 - `--no-fail-on-error` turns off `fail_on_error = true` from configuration.
 - Unknown configuration keys produce a warning instead of being silently ignored.
@@ -50,6 +37,8 @@ Release candidate for 0.3.0, published to Maven Central only (`io.github.shkb42`
 
 ### Fixed
 
+- `THIRD_PARTY_NOTICES.md`, which ships in every package, now lists the LGPL-3.0 malachite libraries that `rustpython-parser` links into the native binary, with their license texts and instructions for rebuilding against a modified copy.
+- Maven release pipeline: the Central publishing plugin is 0.12.0 (0.7.0 could not parse Central's deployment status), and native binaries keep their executable bit between jobs.
 - Large repositories no longer miss their most valuable duplication. Candidate generation was capped at 25,000 pairs per language, filled in bucket order, and skipped any SimHash bucket with more than 100 functions; on Commons Lang and Guava most of `ArrayUtils` and of Guava's `primitives` package was never compared. Each function is now compared with its 6 nearest SimHash neighbours of comparable size, so the work stays linear and nothing is dropped silently. Guava's per-type primitive helpers (`indexOf`, `reverse`, `rotate`, `concat`, …) went from 5 to 135 of 137 clustered, with similar scan times.
 - Java files with type annotations on varargs parameters (`Object @Nullable ... args`, common with JSpecify and the Checker Framework) failed to parse, including Guava's `Preconditions`, `Verify`, `Objects`, and `Strings`. The tree-sitter grammar accepts these annotations only after `...`, so they are now blanked before parsing; offsets and line numbers are unchanged.
 - The Maven plugin no longer prints `?` for the report's symbols on consoles with a legacy code page (the Windows default). Characters the console cannot show are replaced by ASCII equivalents (`•` → `*`, `→` → `->`, `—` → `-`), and the rest are kept. Report files are always UTF-8.

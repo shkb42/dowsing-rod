@@ -14,7 +14,18 @@ It works offline. Source code is parsed locally, normalized locally, and rendere
 
 ## Status
 
-The current release adds native Rust scanning: functions, impl and trait methods with bodies, closures, and async fn. See [CHANGELOG.md](CHANGELOG.md) for each release. The scanner remains local-first: parsing, normalization, scoring, caching, and rendering all happen on the machine running it.
+The current release, 0.3.0, adds Java scanning and a Maven plugin on Maven Central, static musl builds, and faster, more complete candidate generation on large repositories. See [CHANGELOG.md](CHANGELOG.md) for each release. The scanner remains local-first: parsing, normalization, scoring, caching, and rendering all happen on the machine running it.
+
+## Real-World Results
+
+Measured on well-known projects with default settings and no cache; details, examples, limitations, and reproduction commands are in [docs/real-world-results.md](docs/real-world-results.md).
+
+| Project | Functions | Scan time | Clusters (high value) | Known duplicate families found |
+|---|---|---|---|---|
+| Spring PetClinic (Java) | 187 | 0.2 s | 22 (0) | `addPaginationModel` copied between controllers |
+| Apache Commons Lang (Java) | 14,220 | 2.3 s | 1,750 (138) | `ArrayUtils` per-primitive overloads, e.g. `reverse` 18/18, `subarray` 9/9 |
+| Google Guava (Java) | 31,892 | 5.5 s | 4,578 (179) | per-primitive helpers in `Ints`, `Longs`, …: 135 of 137 |
+| Flask (Python) | 1,460 | 0.2 s | 147 (1) | `template_filter` / `template_test` / `template_global` |
 
 ## Install
 

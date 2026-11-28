@@ -36,8 +36,9 @@ allow = [
 ]
 
 # malachite (big integers for rustpython-parser's Python literals) is LGPL-3.0-only and is
-# statically linked into every shipped binary. Allowed here only by name so no other copyleft
-# crate can slip in. TODO(release): resolve before the first public release, see TODO.md.
+# statically linked into every shipped binary. Its terms are met in THIRD_PARTY_NOTICES.md
+# (notice, license texts, and how to rebuild against a modified copy). Allowed here only by
+# name, so no other copyleft crate can slip in; a version change needs the notice updated.
 [[licenses.exceptions]]
 crate = "malachite"
 allow = ["LGPL-3.0-only"]
