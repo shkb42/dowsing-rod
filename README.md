@@ -447,7 +447,7 @@ parse Python with RustPython and JavaScript, TypeScript, C, C++, C#, Java, Rust,
 extract functions, methods, lambdas, HDL tasks/functions, and HDL procedural blocks
 normalize scoped structure while preserving calls, member access, operators, literals, and HDL timing/assignment syntax
 fingerprint normalized tokens
-generate candidate pairs with exact hashes and SimHash LSH
+generate candidate pairs: exact hashes plus each function's nearest SimHash neighbours
 score candidates with multiple similarity signals
 build a thresholded graph
 cluster connected functions

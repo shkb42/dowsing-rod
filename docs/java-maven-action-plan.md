@@ -170,7 +170,7 @@ Java codebases contain a lot of structurally identical boilerplate that is not w
 Risks:
 
 1. **Noise:** "utility" or "near-duplicate" clusters made of accessors.
-2. **Starving real findings:** candidate generation is capped at 25,000 pairs per language (`MAX_CANDIDATES_PER_LANGUAGE`). An enterprise repo with 40k accessors could use up that budget.
+2. **Starving real findings:** candidate generation was capped at 25,000 pairs per language. Testing 0.3.0-rc.2 on Commons Lang and Guava showed the cap was reached and filled by small methods, so most of `ArrayUtils` and Guava's `primitives` package was never compared. **Resolved:** each function now gets its own budget of nearest SimHash neighbours, and functions under 30 tokens are skipped (see [algorithms.md](algorithms.md#candidate-generation)).
 
 Mitigations (proposed, validated in Phase 2):
 
