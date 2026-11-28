@@ -45,9 +45,9 @@ Branch `feature/java-maven` adds Java analysis, musl builds, and the Maven distr
 - [x] 0.3.0-rc.1: published; the provenance attestation was skipped because the Central plugin 0.7.0 failed while waiting (fixed in rc.2).
 - [x] 0.3.0-rc.2: published and attested. Testing it on real repositories found the candidate cap, varargs parsing, and Windows console problems.
 - [x] 0.3.0-rc.3: published with those fixes; results in [docs/real-world-results.md](docs/real-world-results.md).
-- [ ] 0.3.0: merge `release/0.3.0`, tag `v0.3.0` on `main`, run *Maven release* from the tag with **publish**, approve, then verify on Central and with `gh attestation verify`.
-- [ ] Before testing 0.3.0 locally, delete any locally built `~/.m2/repository/io/github/shkb42/*/0.3.0` so Maven uses the Central artifacts.
-- [ ] After 0.3.0, change `egress-policy: audit` to `block` in the publish job of `maven-release.yml`, allowing only the endpoints the harden-runner report lists.
+- [ ] 0.4.0 (upstream already released a 0.3.0 without Java, so this fork's first final release is 0.4.0): merge `release/0.4.0`, tag `v0.4.0` on `main`, run *Maven release* from the tag with **publish**, approve, then verify on Central and with `gh attestation verify`.
+- [ ] Before testing 0.4.0 locally, delete any locally built `~/.m2/repository/io/github/shkb42/*/0.3.0` and `*/0.4.0` so Maven uses the Central artifacts.
+- [ ] After 0.4.0, change `egress-policy: audit` to `block` in the publish job of `maven-release.yml`, allowing only the endpoints the harden-runner report lists.
 - [ ] Contribute upstream (38e9b0f8/dowsing-rod): open an issue first, then focused PRs from branches based on upstream `main` (CI and security hardening; Java and musl; Maven distribution with the namespace upstream chooses).
 
 ## 6. Python / PyPI (deploy deferred)

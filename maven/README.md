@@ -25,7 +25,7 @@ Add it to the build, so `mvn verify` reports on every run and CI can gate on it:
 <plugin>
   <groupId>io.github.shkb42</groupId>
   <artifactId>dowsing-rod-maven-plugin</artifactId>
-  <version>0.3.0</version>
+  <version>0.4.0</version>
   <executions>
     <execution>
       <goals><goal>check</goal></goals>

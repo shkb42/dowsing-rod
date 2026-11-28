@@ -179,7 +179,7 @@ Source: <https://github.com/RustPython/malachite-bigint> and <https://crates.io/
 
 The malachite libraries provide arbitrary-precision integers for `rustpython-parser`, which parses Python source. They are statically linked, unmodified, into every native `dowsing-rod` binary: the CLI, the Python extension, the npm and NuGet packages, and the Maven `dowsing-rod-native` jars.
 
-Dowsing Rod itself is open source under the MIT License. Its complete source code, including the exact dependency versions in `Cargo.lock`, is at <https://github.com/shkb42/dowsing-rod> under the release tag (for example `v0.3.0`). To build Dowsing Rod with a modified version of these libraries, check out that tag, point Cargo at your copy, and rebuild:
+Dowsing Rod itself is open source under the MIT License. Its complete source code, including the exact dependency versions in `Cargo.lock`, is at <https://github.com/shkb42/dowsing-rod> under the release tag (for example `v0.4.0`). To build Dowsing Rod with a modified version of these libraries, check out that tag, point Cargo at your copy, and rebuild:
 
 ```toml
 # Cargo.toml, at the end
