@@ -24,8 +24,15 @@ pub(crate) fn analyze(
             tree = recovered_tree;
         }
     }
+    if language == Language::Java && tree.root_node().has_error() {
+        if let Some(blanked) = blank_java_varargs_annotations(source) {
+            // Only optional metadata is removed, so the result is a normal parse.
+            tree = parse_tree(&blanked, language.grammar(path))?;
+            recovered_source = Some(blanked);
+        }
+    }
     let parser_source = recovered_source.as_deref().unwrap_or(source);
-    let parser_recovered = recovered_source.is_some();
+    let parser_recovered = language == Language::SystemVerilog && recovered_source.is_some();
     let mut result = FileAnalysis::default();
     let mut pending = vec![tree.root_node()];
     while let Some(node) = pending.pop() {
@@ -77,6 +84,117 @@ pub(crate) fn analyze(
         pending.extend(children.into_iter().rev());
     }
     Ok(result)
+}
+
+/// tree-sitter-java (0.23.5, and its main branch) accepts annotations on a
+/// varargs parameter only after the `...`, while Java puts them before it:
+/// `Object @Nullable ... args`, common with JSpecify and the Checker Framework.
+/// Annotations are metadata here, so the ones directly before `...` are
+/// replaced by spaces, which keeps every byte offset and line number.
+/// Returns `None` when there is nothing to blank.
+fn blank_java_varargs_annotations(source: &str) -> Option<String> {
+    let bytes = source.as_bytes();
+    let mut blanked = bytes.to_vec();
+    let mut changed = false;
+    // Annotations seen since the last token that was neither an annotation nor whitespace.
+    let mut run: Vec<(usize, usize)> = Vec::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        let rest = &bytes[i..];
+        if rest.starts_with(b"//") {
+            i += rest.iter().position(|&b| b == b'\n').unwrap_or(rest.len());
+            run.clear();
+        } else if rest.starts_with(b"/*") {
+            i += 2 + find(&rest[2..], b"*/").map_or(rest.len() - 2, |end| end + 2);
+            run.clear();
+        } else if rest.starts_with(b"\"\"\"") {
+            i += 3 + find(&rest[3..], b"\"\"\"").map_or(rest.len() - 3, |end| end + 3);
+            run.clear();
+        } else if rest[0] == b'"' || rest[0] == b'\'' {
+            i += skip_quoted(rest);
+            run.clear();
+        } else if rest[0].is_ascii_whitespace() {
+            i += 1;
+        } else if rest.starts_with(b"...") {
+            for &(start, end) in &run {
+                for byte in &mut blanked[start..end] {
+                    if *byte != b'\n' && *byte != b'\r' {
+                        *byte = b' ';
+                    }
+                }
+                changed = true;
+            }
+            run.clear();
+            i += 3;
+        } else if rest[0] == b'@' && !rest[1..].starts_with(b"interface") {
+            let end = i + annotation_length(rest);
+            if !source.is_char_boundary(end) || !bytes[i..end].is_ascii() {
+                run.clear();
+                i = end.max(i + 1);
+                continue;
+            }
+            run.push((i, end));
+            i = end;
+        } else {
+            run.clear();
+            i += 1;
+        }
+    }
+    // Only ASCII bytes were replaced by ASCII spaces, so the text is still UTF-8.
+    changed.then(|| String::from_utf8(blanked).expect("ASCII-only replacement"))
+}
+
+fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    haystack
+        .windows(needle.len())
+        .position(|window| window == needle)
+}
+
+/// Length of a string or char literal starting at `text[0]`, including quotes.
+fn skip_quoted(text: &[u8]) -> usize {
+    let quote = text[0];
+    let mut i = 1;
+    while i < text.len() && text[i] != quote && text[i] != b'\n' {
+        i += if text[i] == b'\\' { 2 } else { 1 };
+    }
+    (i + 1).min(text.len())
+}
+
+/// Length of an annotation starting at `text[0] == '@'`: a (qualified) name and
+/// an optional parenthesized argument list.
+fn annotation_length(text: &[u8]) -> usize {
+    let mut i = 1;
+    while i < text.len()
+        && (text[i].is_ascii_alphanumeric() || matches!(text[i], b'_' | b'$' | b'.'))
+    {
+        i += 1;
+    }
+    let mut j = i;
+    while j < text.len() && text[j].is_ascii_whitespace() {
+        j += 1;
+    }
+    if j < text.len() && text[j] == b'(' {
+        let mut depth = 0usize;
+        while j < text.len() {
+            match text[j] {
+                b'(' => depth += 1,
+                b')' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return j + 1;
+                    }
+                }
+                b'"' | b'\'' => {
+                    j += skip_quoted(&text[j..]);
+                    continue;
+                }
+                _ => {}
+            }
+            j += 1;
+        }
+        return text.len();
+    }
+    i
 }
 
 /// The bundled grammar parses standard SystemVerilog but does not accept some
@@ -1678,5 +1796,38 @@ endclass
         assert_eq!(collapse_arguments("a.b(x, y(z)).c"), "a.b(..).c");
         assert_eq!(collapse_arguments("client"), "client");
         assert_eq!(collapse_arguments("this.client"), "this.client");
+    }
+
+    #[test]
+    fn java_annotated_varargs_parse() {
+        // Guava, JSpecify style: type annotations directly before `...`.
+        let source = "class A {\n  static int hash(@Nullable Object @Nullable ... objects) {\n    return 31 + objects.length;\n  }\n  static String fmt(String t, Object @org.jspecify.annotations.Nullable @Size(max = \")\") ... args) {\n    return t + args.length;\n  }\n}\n";
+        let r = run(source, "java", NormalizationLevel::Balanced);
+        assert!(r.parse_errors.is_empty(), "{:?}", r.parse_errors);
+        let names: Vec<_> = r
+            .functions
+            .iter()
+            .map(|f| (f.function_name.as_str(), f.start_line, f.end_line))
+            .collect();
+        assert_eq!(names, [("hash", 2, 4), ("fmt", 5, 7)]);
+        assert!(r
+            .functions
+            .iter()
+            .all(|f| !f.parser_recovered && !f.parameters.is_empty()));
+    }
+    #[test]
+    fn java_varargs_blanking_keeps_offsets_and_ignores_strings_and_comments() {
+        let source = "void f(Object @A ... a) { g(\"@B ...\", '@'); /* @C ... */ }\n// @D ...\n";
+        let blanked = blank_java_varargs_annotations(source).unwrap();
+        assert_eq!(blanked.len(), source.len());
+        assert_eq!(
+            blanked,
+            "void f(Object    ... a) { g(\"@B ...\", '@'); /* @C ... */ }\n// @D ...\n"
+        );
+        // Declaration annotations not followed by `...` are kept.
+        assert_eq!(
+            blank_java_varargs_annotations("void f(@A Object a) {}"),
+            None
+        );
     }
 }

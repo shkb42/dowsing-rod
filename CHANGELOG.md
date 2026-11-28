@@ -36,6 +36,8 @@ Release candidate for 0.3.0, published to Maven Central only (`io.github.shkb42`
 
 ### Changed
 
+- Functions with fewer than 30 normalized tokens are no longer compared in JavaScript, TypeScript, C, C++, C#, Java, and Rust. These are one-call lambdas, `return "view"` methods, and field-assigning constructors, which are similar by construction. Python and HDL are unchanged.
+- Scoring is faster: tokens are interned once per scan, and oversized clusters are split in one pass instead of one edge at a time. Results are identical.
 - `.java` files are now scanned. On mixed-language repositories that contain Java, a scan reports more functions and clusters than before. To keep the previous results, add `exclude = ["**/*.java"]`. Output for every other language is unchanged.
 - `.gradle` is skipped by default, like `target` and `build`.
 - Configuration is found in the scanned folder or the nearest folder above it, which also becomes the project root for the cache and displayed paths.
@@ -44,6 +46,9 @@ Release candidate for 0.3.0, published to Maven Central only (`io.github.shkb42`
 
 ### Fixed
 
+- Large repositories no longer miss their most valuable duplication. Candidate generation was capped at 25,000 pairs per language, filled in bucket order, and skipped any SimHash bucket with more than 100 functions; on Commons Lang and Guava most of `ArrayUtils` and of Guava's `primitives` package was never compared. Each function is now compared with its 6 nearest SimHash neighbours of comparable size, so the work stays linear and nothing is dropped silently. Guava's per-type primitive helpers (`indexOf`, `reverse`, `rotate`, `concat`, …) went from 5 to 135 of 137 clustered, with similar scan times.
+- Java files with type annotations on varargs parameters (`Object @Nullable ... args`, common with JSpecify and the Checker Framework) failed to parse, including Guava's `Preconditions`, `Verify`, `Objects`, and `Strings`. The tree-sitter grammar accepts these annotations only after `...`, so they are now blanked before parsing; offsets and line numbers are unchanged.
+- The Maven plugin no longer prints `?` for the report's symbols on consoles with a legacy code page (the Windows default). Characters the console cannot show are replaced by ASCII equivalents (`•` → `*`, `→` → `->`, `—` → `-`), and the rest are kept. Report files are always UTF-8.
 - `max_tokens` from configuration now applies to CLI AI output.
 - CLI flags and Python keyword arguments now override configuration even when they equal the default, for example `--min-similarity 0.75` over a configured `0.9`.
 - `scripts/test-npm.mjs` accepts npm 12's `npm pack --json` output.

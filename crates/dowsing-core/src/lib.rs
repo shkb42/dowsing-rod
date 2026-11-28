@@ -223,9 +223,9 @@ pub fn scan(config: ScanConfig) -> Result<ScanResult> {
             .push(fp);
     }
     let mut candidate_pairs = Vec::new();
-    for fingerprints in partitions.values() {
+    for (language, fingerprints) in &partitions {
         candidate_pairs.extend(
-            candidates::generate_candidates(fingerprints, 12)
+            candidates::generate_candidates(fingerprints, 12, language.min_function_tokens())
                 .into_iter()
                 .map(|(a, b)| (fingerprints[a].function_id, fingerprints[b].function_id)),
         );
@@ -233,18 +233,22 @@ pub fn scan(config: ScanConfig) -> Result<ScanResult> {
     candidate_pairs.sort_unstable();
 
     // ── 7. Compute similarity for each candidate pair ────────────────
-    let norm_lookup: std::collections::HashMap<usize, &NormalizedFunction> =
-        all_normalized.iter().map(|n| (n.function_id, n)).collect();
+    let mut interner = similarity::TokenInterner::default();
+    let token_ids: std::collections::HashMap<usize, similarity::TokenIds> = all_normalized
+        .iter()
+        .map(|n| (n.function_id, interner.intern(&n.tokens)))
+        .collect();
 
     let scores: Vec<SimilarityScore> = candidate_pairs
         .par_iter()
         .filter_map(|&(a, b)| {
-            let norm_a = norm_lookup.get(&a)?;
-            let norm_b = norm_lookup.get(&b)?;
-            let info_a = all_functions.get(a)?;
-            let info_b = all_functions.get(b)?;
-            Some(similarity::compute_similarity(
-                norm_a, norm_b, info_a, info_b,
+            Some(similarity::compute_similarity_with_ids(
+                a,
+                b,
+                token_ids.get(&a)?,
+                token_ids.get(&b)?,
+                all_functions.get(a)?,
+                all_functions.get(b)?,
             ))
         })
         .collect();

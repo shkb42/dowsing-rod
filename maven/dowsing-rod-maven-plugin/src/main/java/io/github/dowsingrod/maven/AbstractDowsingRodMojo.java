@@ -233,15 +233,16 @@ abstract class AbstractDowsingRodMojo extends AbstractMojo {
             throws MojoExecutionException, MojoFailureException {
         getLog().debug("dowsing-rod " + String.join(" ", args));
         StringBuilder errors = new StringBuilder();
+        ConsoleText console = ConsoleText.forStandardOutput();
         ProcessResult result;
         try {
             Path directory = target();
             result = rod.run(args, Files.isDirectory(directory) ? directory : directory.getParent(), stdout, line -> {
                 errors.append(line).append('\n');
                 if (line.startsWith("warning:")) {
-                    getLog().warn(line.substring("warning:".length()).trim());
+                    getLog().warn(console.apply(line.substring("warning:".length()).trim()));
                 } else if (!line.startsWith("error:")) {
-                    getLog().warn(line);
+                    getLog().warn(console.apply(line));
                 }
             });
         } catch (DowsingRodException e) {
@@ -268,6 +269,7 @@ abstract class AbstractDowsingRodMojo extends AbstractMojo {
 
     /** Log every line at info level, as Maven users expect for a report. */
     protected Consumer<String> infoLog() {
-        return line -> getLog().info(line);
+        ConsoleText console = ConsoleText.forStandardOutput();
+        return line -> getLog().info(console.apply(line));
     }
 }

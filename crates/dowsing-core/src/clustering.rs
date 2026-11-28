@@ -5,6 +5,7 @@ use crate::types::{
     Cluster, FunctionInfo, FunctionKind, NormalizedFunction, RefactoringClassification,
     SimilarityScore, SimilaritySignals,
 };
+use rayon::prelude::*;
 use std::collections::HashMap;
 
 /// Maximum cluster size — prevents meaningless mega-clusters.
@@ -39,29 +40,29 @@ pub fn cluster_functions(
     }
 
     let components = graph.connected_components();
-    let mut clusters = Vec::new();
-    let mut cluster_counter = 0usize;
-
+    let mut reportable = Vec::new();
     for component in components {
         // Split oversized components
-        let sub_components = split_if_oversized(component, graph, MAX_CLUSTER_SIZE);
-
-        for sub in sub_components {
-            if sub.len() < 2 {
-                continue;
+        for sub in split_if_oversized(component, graph, MAX_CLUSTER_SIZE) {
+            if sub.len() >= 2 && is_reportable_hdl_component(&sub, functions, &norm_lookup) {
+                reportable.push(sub);
             }
-
-            if !is_reportable_hdl_component(&sub, functions, &norm_lookup) {
-                continue;
-            }
-
-            cluster_counter += 1;
-            let cluster_id = format!("C{cluster_counter}");
-
-            let cluster = build_cluster(cluster_id, sub, functions, &score_lookup, &norm_lookup);
-            clusters.push(cluster);
         }
     }
+
+    let clusters: Vec<Cluster> = reportable
+        .into_par_iter()
+        .enumerate()
+        .map(|(i, sub)| {
+            build_cluster(
+                format!("C{}", i + 1),
+                sub,
+                functions,
+                &score_lookup,
+                &norm_lookup,
+            )
+        })
+        .collect();
 
     clusters
 }
@@ -253,17 +254,18 @@ fn split_if_oversized(
         return vec![component];
     }
 
-    // Iteratively remove the weakest edges until all components are <= max_size
+    // Remove the weakest edges until all components are <= max_size.
+    let members: std::collections::HashSet<usize> = component.iter().copied().collect();
     let mut adj: HashMap<usize, Vec<(usize, f64)>> = HashMap::new();
     for &node in &component {
         for &(neighbor, weight) in graph.neighbors(node) {
-            if component.contains(&neighbor) {
+            if members.contains(&neighbor) {
                 adj.entry(node).or_default().push((neighbor, weight));
             }
         }
     }
 
-    // Collect edges sorted by weight (weakest first)
+    // Edges sorted by weight, weakest first (a stable sort keeps ties deterministic).
     let mut edges: Vec<(usize, usize, f64)> = Vec::new();
     for &node in &component {
         for &(neighbor, weight) in adj.get(&node).unwrap_or(&Vec::new()) {
@@ -274,21 +276,39 @@ fn split_if_oversized(
     }
     edges.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap());
 
-    // Remove weakest edges until all components fit within max_size
-    let mut removed: std::collections::HashSet<(usize, usize)> = std::collections::HashSet::new();
-    loop {
-        let components = bfs_components(&component, &adj, &removed);
-        if components.iter().all(|c| c.len() <= max_size) {
-            return components;
+    // Removing a prefix of `edges` only ever shrinks components, so the shortest
+    // prefix that works is found in one pass: add edges strongest first and stop
+    // at the first one that would join two groups into one larger than max_size.
+    let position: HashMap<usize, usize> =
+        component.iter().enumerate().map(|(i, &n)| (n, i)).collect();
+    let mut parent: Vec<usize> = (0..component.len()).collect();
+    let mut size = vec![1usize; component.len()];
+    fn find(parent: &mut [usize], mut x: usize) -> usize {
+        while parent[x] != x {
+            parent[x] = parent[parent[x]];
+            x = parent[x];
         }
-        if let Some(edge) = edges.first() {
-            removed.insert((edge.0, edge.1));
-            edges.remove(0);
-        } else {
-            break;
-        }
+        x
     }
-
+    let mut kept = 0usize;
+    for &(a, b, _) in edges.iter().rev() {
+        let (ra, rb) = (
+            find(&mut parent, position[&a]),
+            find(&mut parent, position[&b]),
+        );
+        if ra != rb {
+            if size[ra] + size[rb] > max_size {
+                break;
+            }
+            parent[rb] = ra;
+            size[ra] += size[rb];
+        }
+        kept += 1;
+    }
+    let removed: std::collections::HashSet<(usize, usize)> = edges[..edges.len() - kept]
+        .iter()
+        .map(|&(a, b, _)| (a, b))
+        .collect();
     bfs_components(&component, &adj, &removed)
 }
 
@@ -397,5 +417,83 @@ mod tests {
         let clusters = cluster_functions(&graph, &scores, &functions, &normalized);
         assert_eq!(clusters.len(), 1);
         assert_eq!(clusters[0].function_indices.len(), 3);
+    }
+
+    /// The original edge-by-edge splitting, kept as the reference for the
+    /// union-find version above.
+    fn split_reference(
+        component: Vec<usize>,
+        graph: &SimilarityGraph,
+        max_size: usize,
+    ) -> Vec<Vec<usize>> {
+        if component.len() <= max_size {
+            return vec![component];
+        }
+        let mut adj: HashMap<usize, Vec<(usize, f64)>> = HashMap::new();
+        for &node in &component {
+            for &(neighbor, weight) in graph.neighbors(node) {
+                if component.contains(&neighbor) {
+                    adj.entry(node).or_default().push((neighbor, weight));
+                }
+            }
+        }
+        let mut edges: Vec<(usize, usize, f64)> = Vec::new();
+        for &node in &component {
+            for &(neighbor, weight) in adj.get(&node).unwrap_or(&Vec::new()) {
+                if node < neighbor {
+                    edges.push((node, neighbor, weight));
+                }
+            }
+        }
+        edges.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap());
+        let mut removed = std::collections::HashSet::new();
+        loop {
+            let components = bfs_components(&component, &adj, &removed);
+            if components.iter().all(|c| c.len() <= max_size) {
+                return components;
+            }
+            if edges.is_empty() {
+                return components;
+            }
+            let edge = edges.remove(0);
+            removed.insert((edge.0, edge.1));
+        }
+    }
+
+    #[test]
+    fn split_matches_reference_on_random_graphs() {
+        let mut seed = 0x2545_f491_4f6c_dd1du64;
+        let mut next = move || {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            seed
+        };
+        for round in 0..200 {
+            let n = 5 + (next() % 60) as usize;
+            let edges = n + (next() % (n as u64 * 4)) as usize;
+            // Unique pairs, as candidate generation guarantees.
+            let mut pairs = std::collections::BTreeSet::new();
+            for _ in 0..edges {
+                let (a, b) = ((next() % n as u64) as usize, (next() % n as u64) as usize);
+                if a != b {
+                    pairs.insert((a.min(b), a.max(b)));
+                }
+            }
+            let scores: Vec<SimilarityScore> = pairs
+                .into_iter()
+                // Coarse weights so ties, which the stable sort must order, are common.
+                .map(|(a, b)| make_score(a, b, 0.75 + (next() % 6) as f64 * 0.05))
+                .collect();
+            let graph = SimilarityGraph::build(n, &scores, 0.75);
+            let max_size = 2 + round % 12;
+            for component in graph.connected_components() {
+                assert_eq!(
+                    split_if_oversized(component.clone(), &graph, max_size),
+                    split_reference(component, &graph, max_size),
+                    "round {round}"
+                );
+            }
+        }
     }
 }
