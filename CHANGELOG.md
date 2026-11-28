@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Java support, a Maven plugin, static musl builds, and more complete results on large repositories. Results on Spring PetClinic, Apache Commons Lang, Guava, and Flask are in [docs/real-world-results.md](docs/real-world-results.md).
+
+### Added
+
+- Native structural analysis for Java (`.java`): methods, constructors, record compact constructors, lambdas, and methods of anonymous and local classes. Modern syntax is understood: switch expressions, pattern matching, text blocks, try-with-resources, and records. Trivial getters and setters are skipped, and annotations and modifiers are metadata, not structure. Type annotations on varargs (`Object @Nullable ... args`), which tree-sitter-java rejects, are blanked before parsing.
+- Maven distribution, published to Maven Central under `io.github.shkb42`. `dowsing-rod-maven-plugin` adds the `scan`, `auto`, `init`, `check` (build gate), `cache-clear`, and `help` goals and runs once per reactor by default. `dowsing-rod-java` is a dependency-free Java 8+ API. `dowsing-rod-native` holds the per-platform binaries, verified by SHA-256. Java 8+ and Maven 3.6.3+ are enough; no Python, Node, or .NET is needed. The artifacts are published from the [shkb42/dowsing-rod](https://github.com/shkb42/dowsing-rod) fork; on consoles that cannot show the report's symbols (Windows code pages), the plugin prints ASCII equivalents.
+- Static musl builds for Linux x64 and arm64 (Alpine). They ship as the npm packages `dowsing-rod-native-linux-{x64,arm64}-musl`, the NuGet RIDs `linux-musl-{x64,arm64}`, and the Maven classifiers `linux-{x86_64,aarch_64}-musl`. The npm and NuGet launchers pick them automatically instead of refusing to run on musl.
+- `docs/real-world-results.md`: results on Spring PetClinic, Commons Lang, Guava, and Flask, with reproduction commands for Maven, the CLI, and Python.
+- Security and supply-chain CI: `security.yml` (CodeQL, zizmor and actionlint, gitleaks, cargo-deny, dependency review), OpenSSF Scorecard, and Dependabot. Every action is pinned to a commit SHA, release jobs use no caches, and Maven releases add CycloneDX SBOMs, build-provenance attestations, and a check that published jars are byte-identical to the tested ones.
+
+### Changed
+
+- Functions with fewer than 30 normalized tokens are no longer compared in JavaScript, TypeScript, C, C++, C#, Java, and Rust. These are one-call lambdas, `return "view"` methods, and field-assigning constructors, which are similar by construction. Python and HDL are unchanged.
+- Scoring is faster: tokens are interned once per scan, and oversized clusters are split in one pass instead of one edge at a time. Results are identical.
+- `.java` files are now scanned. On mixed-language repositories that contain Java, a scan reports more functions and clusters than before. To keep the previous results, add `exclude = ["**/*.java"]`. Output for every other language is unchanged.
+- `.gradle` is skipped by default, like `target` and `build`.
+
+### Fixed
+
+- `THIRD_PARTY_NOTICES.md`, which ships in every package, now lists the LGPL-3.0 malachite libraries that `rustpython-parser` links into the native binary, with their license texts and instructions for rebuilding against a modified copy.
+- Large repositories no longer miss their most valuable duplication. Candidate generation was capped at 25,000 pairs per language, filled in bucket order, and skipped any SimHash bucket with more than 100 functions; on Commons Lang and Guava most of `ArrayUtils` and of Guava's `primitives` package was never compared. Each function is now compared with its 6 nearest SimHash neighbours of comparable size, so the work stays linear and nothing is dropped silently. Guava's per-type primitive helpers (`indexOf`, `reverse`, `rotate`, `concat`, …) went from 5 to 135 of 137 clustered, with similar scan times.
+
 ## [0.3.0] - Unreleased
 
 ### Added
