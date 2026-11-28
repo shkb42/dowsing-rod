@@ -1,7 +1,7 @@
 use crate::types::{
     FunctionInfo, NormalizedFunction, SimilarityScore, SimilaritySignals, StructuralToken,
 };
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
 /// Similarity weight model (documented, tunable).
 ///
@@ -19,6 +19,37 @@ const W_CONTROL: f64 = 0.15;
 const W_COMPLEXITY: f64 = 0.05;
 const W_PARAMS: f64 = 0.05;
 
+/// Normalized tokens of one function as interned IDs: equal IDs mean equal
+/// tokens, so integer comparisons give exactly the same results as comparing
+/// the tokens themselves, at a fraction of the cost.
+#[derive(Debug, Clone, Default)]
+pub struct TokenIds {
+    all: Vec<u32>,
+    control_flow: Vec<u32>,
+}
+
+/// Assigns one ID per distinct token. Share one interner across all functions
+/// whose `TokenIds` will be compared with each other.
+#[derive(Debug, Default)]
+pub struct TokenInterner<'a> {
+    ids: HashMap<&'a StructuralToken, u32>,
+}
+
+impl<'a> TokenInterner<'a> {
+    pub fn intern(&mut self, tokens: &'a [StructuralToken]) -> TokenIds {
+        let mut ids = TokenIds::default();
+        for token in tokens {
+            let next = self.ids.len() as u32;
+            let id = *self.ids.entry(token).or_insert(next);
+            ids.all.push(id);
+            if token.is_control_flow() {
+                ids.control_flow.push(id);
+            }
+        }
+        ids
+    }
+}
+
 /// Compute detailed multi-signal similarity between two functions.
 pub fn compute_similarity(
     norm_a: &NormalizedFunction,
@@ -26,10 +57,33 @@ pub fn compute_similarity(
     info_a: &FunctionInfo,
     info_b: &FunctionInfo,
 ) -> SimilarityScore {
-    let ast_sim = ast_structure_similarity(&norm_a.tokens, &norm_b.tokens);
-    let token_sim = token_jaccard_similarity(&norm_a.tokens, &norm_b.tokens);
+    let mut interner = TokenInterner::default();
+    let ids_a = interner.intern(&norm_a.tokens);
+    let ids_b = interner.intern(&norm_b.tokens);
+    compute_similarity_with_ids(
+        norm_a.function_id,
+        norm_b.function_id,
+        &ids_a,
+        &ids_b,
+        info_a,
+        info_b,
+    )
+}
+
+/// [`compute_similarity`] for functions whose tokens were interned by one shared
+/// [`TokenInterner`].
+pub fn compute_similarity_with_ids(
+    func_a: usize,
+    func_b: usize,
+    ids_a: &TokenIds,
+    ids_b: &TokenIds,
+    info_a: &FunctionInfo,
+    info_b: &FunctionInfo,
+) -> SimilarityScore {
+    let ast_sim = ast_structure_similarity(&ids_a.all, &ids_b.all);
+    let token_sim = token_jaccard_similarity(&ids_a.all, &ids_b.all);
     let call_sim = call_set_similarity(&info_a.called_functions, &info_b.called_functions);
-    let control_sim = control_flow_similarity(&norm_a.tokens, &norm_b.tokens);
+    let control_sim = control_flow_similarity(&ids_a.control_flow, &ids_b.control_flow);
     let complexity_sim = complexity_similarity(info_a.complexity, info_b.complexity);
     let param_sim = parameter_similarity(info_a, info_b);
 
@@ -41,8 +95,8 @@ pub fn compute_similarity(
         + W_PARAMS * param_sim;
 
     SimilarityScore {
-        func_a: norm_a.function_id,
-        func_b: norm_b.function_id,
+        func_a,
+        func_b,
         overall,
         signals: SimilaritySignals {
             ast: ast_sim,
@@ -59,7 +113,7 @@ pub fn compute_similarity(
 ///
 /// Compares the full normalized token sequences.
 /// Returns LCS_length / max(len_a, len_b).
-fn ast_structure_similarity(tokens_a: &[StructuralToken], tokens_b: &[StructuralToken]) -> f64 {
+fn ast_structure_similarity(tokens_a: &[u32], tokens_b: &[u32]) -> f64 {
     if tokens_a.is_empty() && tokens_b.is_empty() {
         return 1.0;
     }
@@ -67,13 +121,14 @@ fn ast_structure_similarity(tokens_a: &[StructuralToken], tokens_b: &[Structural
         return 0.0;
     }
 
-    let lcs_len = lcs_length(tokens_a, tokens_b);
+    // Very long sequences are capped at 500 tokens to bound the O(n*m) cost.
+    let lcs_len = lcs_length(tokens_a, tokens_b, 500);
     let max_len = tokens_a.len().max(tokens_b.len());
     lcs_len as f64 / max_len as f64
 }
 
 /// Token-level Jaccard similarity (multiset intersection / union).
-fn token_jaccard_similarity(tokens_a: &[StructuralToken], tokens_b: &[StructuralToken]) -> f64 {
+fn token_jaccard_similarity(tokens_a: &[u32], tokens_b: &[u32]) -> f64 {
     if tokens_a.is_empty() && tokens_b.is_empty() {
         return 1.0;
     }
@@ -81,24 +136,17 @@ fn token_jaccard_similarity(tokens_a: &[StructuralToken], tokens_b: &[Structural
         return 0.0;
     }
 
-    let mut freq_a = std::collections::HashMap::new();
-    let mut freq_b = std::collections::HashMap::new();
-
-    for t in tokens_a {
-        *freq_a.entry(t).or_insert(0usize) += 1;
+    let mut counts: HashMap<u32, (usize, usize)> = HashMap::new();
+    for &t in tokens_a {
+        counts.entry(t).or_default().0 += 1;
     }
-    for t in tokens_b {
-        *freq_b.entry(t).or_insert(0usize) += 1;
+    for &t in tokens_b {
+        counts.entry(t).or_default().1 += 1;
     }
-
-    let all_keys: BTreeSet<_> = freq_a.keys().chain(freq_b.keys()).cloned().collect();
 
     let mut intersection = 0usize;
     let mut union = 0usize;
-
-    for key in &all_keys {
-        let a = freq_a.get(key).copied().unwrap_or(0);
-        let b = freq_b.get(key).copied().unwrap_or(0);
+    for &(a, b) in counts.values() {
         intersection += a.min(b);
         union += a.max(b);
     }
@@ -128,10 +176,7 @@ fn call_set_similarity(calls_a: &BTreeSet<String>, calls_b: &BTreeSet<String>) -
 }
 
 /// Control flow similarity: compare only control flow tokens.
-fn control_flow_similarity(tokens_a: &[StructuralToken], tokens_b: &[StructuralToken]) -> f64 {
-    let cf_a: Vec<&StructuralToken> = tokens_a.iter().filter(|t| t.is_control_flow()).collect();
-    let cf_b: Vec<&StructuralToken> = tokens_b.iter().filter(|t| t.is_control_flow()).collect();
-
+fn control_flow_similarity(cf_a: &[u32], cf_b: &[u32]) -> f64 {
     if cf_a.is_empty() && cf_b.is_empty() {
         return 1.0;
     }
@@ -140,7 +185,7 @@ fn control_flow_similarity(tokens_a: &[StructuralToken], tokens_b: &[StructuralT
     }
 
     // Use sequence similarity for control flow
-    let lcs = lcs_length_ref(&cf_a, &cf_b);
+    let lcs = lcs_length(cf_a, cf_b, 200);
     let max_len = cf_a.len().max(cf_b.len());
     lcs as f64 / max_len as f64
 }
@@ -182,56 +227,28 @@ fn parameter_similarity(info_a: &FunctionInfo, info_b: &FunctionInfo) -> f64 {
     count_sim * 0.7 + async_sim * 0.3
 }
 
-/// Longest common subsequence length (O(n*m) dynamic programming).
-/// For very long sequences, we cap at 500 tokens to avoid excessive computation.
-fn lcs_length(a: &[StructuralToken], b: &[StructuralToken]) -> usize {
-    let max_len = 500;
-    let a = if a.len() > max_len { &a[..max_len] } else { a };
-    let b = if b.len() > max_len { &b[..max_len] } else { b };
+/// Longest common subsequence length (O(n*m) dynamic programming) of the
+/// first `cap` elements of each sequence.
+fn lcs_length(a: &[u32], b: &[u32], cap: usize) -> usize {
+    let a = &a[..a.len().min(cap)];
+    let b = &b[..b.len().min(cap)];
 
-    let m = a.len();
     let n = b.len();
-    let mut prev = vec![0usize; n + 1];
-    let mut curr = vec![0usize; n + 1];
+    let mut prev = vec![0u32; n + 1];
+    let mut curr = vec![0u32; n + 1];
 
-    for i in 1..=m {
+    for &x in a {
         for j in 1..=n {
-            if a[i - 1] == b[j - 1] {
-                curr[j] = prev[j - 1] + 1;
+            curr[j] = if x == b[j - 1] {
+                prev[j - 1] + 1
             } else {
-                curr[j] = prev[j].max(curr[j - 1]);
-            }
+                prev[j].max(curr[j - 1])
+            };
         }
         std::mem::swap(&mut prev, &mut curr);
-        curr.fill(0);
     }
 
-    prev[n]
-}
-
-/// LCS length for reference slices.
-fn lcs_length_ref<T: PartialEq>(a: &[T], b: &[T]) -> usize {
-    let m = a.len().min(200);
-    let n = b.len().min(200);
-    let a = &a[..m];
-    let b = &b[..n];
-
-    let mut prev = vec![0usize; n + 1];
-    let mut curr = vec![0usize; n + 1];
-
-    for i in 1..=m {
-        for j in 1..=n {
-            if a[i - 1] == b[j - 1] {
-                curr[j] = prev[j - 1] + 1;
-            } else {
-                curr[j] = prev[j].max(curr[j - 1]);
-            }
-        }
-        std::mem::swap(&mut prev, &mut curr);
-        curr.fill(0);
-    }
-
-    prev[n]
+    prev[n] as usize
 }
 
 #[cfg(test)]

@@ -108,11 +108,12 @@ Candidate generation is intentionally cheaper than full similarity scoring. Func
 
 It combines:
 
+- a minimum size: functions with fewer than 30 normalized tokens are not compared in the tree-sitter software languages (one-call lambdas, `return "view"` methods, field-assigning constructors). Python and HDL compare everything;
 - exact-hash groups, represented by deterministic report-sized spanning trees;
-- SimHash locality-sensitive buckets;
-- exhaustive Hamming-distance checks only for small language partitions.
+- small partitions (up to 50,000 pairs): every remaining pair is scored;
+- larger partitions: each function is paired with its 6 nearest neighbours by SimHash Hamming distance (at most 12 bits), among functions no more than twice or half its size.
 
-Candidate sets are capped per language partition. This keeps the expensive scoring phase focused on plausible structural overlap and prevents generated code or very large repositories from taking a quadratic path.
+The per-function budget is what keeps large repositories accurate. A single global cap (the approach in 0.3.0 and earlier) filled up with dense groups of near-identical small functions, so the larger duplicated methods that matter most were never compared. The cost is linear in the number of functions per size band, and the number of scored pairs is at most six per function.
 
 ## Similarity Scoring
 

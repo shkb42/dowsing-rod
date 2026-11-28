@@ -177,7 +177,11 @@ fn bench_candidates(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::from_parameter(n), &fps, |b, fps| {
             b.iter(|| {
-                let candidates = generate_candidates(black_box(fps), 12);
+                let candidates = generate_candidates(
+                    black_box(fps),
+                    12,
+                    dowsing_core::language::Language::Python.min_function_tokens(),
+                );
                 black_box(candidates);
             });
         });

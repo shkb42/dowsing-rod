@@ -49,6 +49,26 @@ impl Language {
         })
     }
 
+    /// Functions with fewer normalized tokens than this are not compared. For the
+    /// tree-sitter software languages, units below ~30 tokens are one-call lambdas,
+    /// `return "view"` methods, and field-assigning constructors: similar by
+    /// construction and never worth a refactoring (measured on Spring PetClinic,
+    /// Apache Commons Lang, and Guava). Python's normalizer emits fewer tokens per
+    /// line, and HDL units are only ever reported as exact matches, so both keep
+    /// comparing everything.
+    pub fn min_function_tokens(self) -> usize {
+        match self {
+            Self::Python | Self::Verilog | Self::SystemVerilog | Self::Vhdl => 0,
+            Self::TypeScript
+            | Self::JavaScript
+            | Self::C
+            | Self::Cpp
+            | Self::CSharp
+            | Self::Java
+            | Self::Rust => 30,
+        }
+    }
+
     pub fn is_hdl(self) -> bool {
         matches!(self, Self::Verilog | Self::SystemVerilog | Self::Vhdl)
     }
